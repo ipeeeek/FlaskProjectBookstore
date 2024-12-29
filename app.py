@@ -1,3 +1,4 @@
+from config import Config
 from flask import Flask, render_template
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -6,9 +7,12 @@ from models import Base, Book  # Import your models
 
 app = Flask(__name__)
 
-# Database Configuration (replace with your credentials)
-DATABASE_URI = "mssql+pyodbc://bookstore_dev_user:booksRus@localhost/bookstore_dev?driver=ODBC+Driver+17+for+SQL+Server"
-engine = create_engine(DATABASE_URI)
+# Load configuration from config.py before using it
+app.config.from_object(Config)
+
+# ... rest of your code using app.config values
+
+engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
 
 # Create tables if they don't exist (important for initial setup)
 Base.metadata.create_all(engine)
