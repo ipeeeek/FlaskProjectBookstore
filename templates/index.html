@@ -1,10 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Bookstore</title>
 </head>
 <body>
+    <h1>Welcome to the Bookstore!</h1>
 
+    <ul>
+        {% for book in books %}
+        <li>{{ book.title }} - ${{ book.price }}</li>
+        {% endfor %}
+    </ul>
 </body>
 </html>

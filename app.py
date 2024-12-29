@@ -1,22 +1,26 @@
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from config import Config
-from sqlalchemy import text
+from flask import Flask, render_template
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-# Create an instance of Flask
+from models import Base, Book  # Import your models
+
 app = Flask(__name__)
 
-# Load configuration
-app.config.from_object(Config)
+# Database Configuration (replace with your credentials)
+DATABASE_URI = "mssql+pyodbc://bookstore_dev_user:booksRus@localhost/bookstore_dev?driver=ODBC+Driver+17+for+SQL+Server"
+engine = create_engine(DATABASE_URI)
 
-# Initialize SQLAlchemy
-db = SQLAlchemy(app)
+# Create tables if they don't exist (important for initial setup)
+Base.metadata.create_all(engine)
 
-# Test the connection (Optional but recommended)
-try:
-    # Use text() to wrap the SQL query
-    with app.app_context():
-        result = db.session.execute(text('SELECT 1'))
-        print("Database connected successfully")
-except Exception as e:
-    print(f"Database connection error: {e}")
+Session = sessionmaker(bind=engine)
+
+@app.route("/")
+def index():
+    session = Session()
+    books = session.query(Book).limit(10).all()  # Get some books from the database
+    session.close()
+    return render_template("index.html", books=books)
+
+if __name__ == "__main__":
+    app.run(debug=True)  # debug=True for development
