@@ -40,21 +40,6 @@ def search():
 
     return render_template("index.html", books=search_results, query=query)
 
-
-@app.route("/add_to_cart/<int:book_id>", methods=["POST"])
-def add_to_cart(book_id):
-    if "cart" not in flask_session:
-        flask_session["cart"] = {}
-
-    if book_id in flask_session["cart"]:
-        flask_session["cart"][book_id] += 1
-    else:
-        flask_session["cart"][book_id] = 1
-
-    flask_session.modified = True
-    return redirect(url_for('index'))
-
-
 @app.route("/cart")
 def view_cart():
     cart_items = []
@@ -195,3 +180,30 @@ def login():
         return redirect(url_for("index"))  # Redirect to home page after successful login
 
     return render_template("login.html")  # Render login page for GET request
+
+@app.route('/add_to_cart/<int:book_id>', methods=['POST'])
+def add_to_cart(book_id):
+    # Ensure the user is logged in
+    if 'customer_id' not in flask_session or 'cart_id' not in flask_session:
+        flash("You need to be logged in to add books to the cart.", "danger")
+        return redirect(url_for('login'))
+
+    cart_id = flask_session['cart_id']
+
+    db_session = Session()  # Initialize the SQLAlchemy session
+    try:
+        # Execute stored procedure to add book to cart
+        db_session.execute(
+            text("EXEC usp_add_book_to_cart :cart_id, :book_id"),
+            {"cart_id": cart_id, "book_id": book_id}
+        )
+        db_session.commit()
+
+        flash("Book added to cart successfully!", "success")
+    except SQLAlchemyError as e:
+        db_session.rollback()
+        flash(f"An error occurred: {str(e)}", "danger")
+    finally:
+        db_session.close()
+
+    return redirect(url_for('book_detail', book_id=book_id))

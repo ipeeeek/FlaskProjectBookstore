@@ -13,5 +13,10 @@
         {% set image_filename = book.cover_image_path.split('/')[-1] if '/' in book.cover_image_path else book.cover_image_path %}
         <img src="{{ url_for('static', filename='covers/' + image_filename) }}" alt="Book Cover" class="img-fluid">
     {% endif %}
+
+    <!-- Add to Cart Button -->
+    <form method="POST" action="{{ url_for('add_to_cart', book_id=book.book_id) }}" class="mt-3">
+        <button type="submit" class="btn btn-primary">Add to Cart</button>
+    </form>
 </div>
 {% endblock %}
