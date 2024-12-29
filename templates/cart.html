@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Shopping Cart - Bookstore{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Shopping Cart</h1>
+
+    {% if cart_items %}
+        <div class="row">
+            <div class="col-12">
+                <ul class="list-group">
+                    {% for item in cart_items %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h2>{{ item.book.title }}</h2>
+                                <p>Price: ${{ item.book.price }}</p>
+                                <p>Quantity: {{ item.quantity }}</p>
+                            </div>
+                            <a href="{{ url_for('remove_from_cart', book_id=item.book.book_id) }}" class="btn btn-danger">Remove</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+
+                <div class="mt-4">
+                    <h3>Total Price: ${{ total_price }}</h3>
+                    <a href="/" class="btn btn-primary">Continue Shopping</a>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <p>Your cart is empty.</p>
+            <a href="/" class="btn btn-primary">Continue Shopping</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+body {
+    font-family: sans-serif;
+    margin: 20px;
+    background-color: #f0f0f0; /* Light gray background */
+}
+
+h1 {
+    color: #333; /* Dark gray heading color */
+}
+
+ul {
+    list-style-type: none; /* Remove bullet points from lists */
+    padding: 0;
+}
+
+li {
+    margin-bottom: 10px;
+    border: 1px solid #ddd; /* Light gray border around list items */
+    padding: 10px;
+    border-radius: 5px;
+}
+
+a {
+    color: blue;
+    text-decoration: none;
+}
+a:hover{
+    text-decoration: underline;
+}
+
+img {
+    max-width: 200px; /* Set a maximum width for images */
+    height: auto;
+    display: block;
+    margin: 10px auto;
+}

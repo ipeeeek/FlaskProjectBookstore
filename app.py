@@ -12,3 +12,5 @@ engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
 Base.metadata.create_all(engine)
 
 Session = sessionmaker(bind=engine)
+
+import routes

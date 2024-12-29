@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Bookstore{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Login</h2>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="alert alert-warning">
+                <ul>
+                    {% for category, message in messages %}
+                        <li class="text-danger">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Login Form -->
+    <form method="POST" action="{{ url_for('login') }}">
+        <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" id="email" name="email" required class="form-control" placeholder="Enter your email">
+        </div>
+        <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" id="password" name="password" required class="form-control" placeholder="Enter your password">
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-primary">Login</button>
+        </div>
+    </form>
+
+    <p>Don't have an account? <a href="{{ url_for('register_customer') }}">Register here</a></p>
+</div>
+{% endblock %}

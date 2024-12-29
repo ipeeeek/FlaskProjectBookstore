@@ -5,9 +5,24 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ba013770-3ed0-4295-aea8-81aa6b2b25e1" name="Changes" comment="Update app.py, workspace.xml">
-      <change afterPath="$PROJECT_DIR$/routes.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/static/style.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/base.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/book.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/cart.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/login.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/process_order.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/register.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/static/cover_images/1984.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/static/covers/1984.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/static/cover_images/harry_potter.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/static/covers/harry_potter.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/static/cover_images/pride_and_prejudice.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/static/covers/pride_and_prejudice.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/static/cover_images/the_great_gatsby.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/static/covers/the_great_gatsby.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/static/cover_images/to_kill_a_mockingbird.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/static/covers/to_kill_a_mockingbird.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/index.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -18,8 +33,8 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="Flask Main" />
-        <option value="HTML File" />
         <option value="Python Script" />
+        <option value="HTML File" />
       </list>
     </option>
   </component>
@@ -80,6 +95,11 @@
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\ipyal\PycharmProjects\FlaskProjectBookstore\static\covers" />
+    </key>
+  </component>
   <component name="RunManager">
     <configuration name="FlaskProjectBookstore" type="Python.FlaskServer">
       <module name="FlaskProjectBookstore" />
@@ -89,7 +109,7 @@
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
       <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
@@ -182,7 +202,7 @@
     <option name="LAST_COMMIT_MESSAGE" value="Update app.py, workspace.xml" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/FlaskProjectBookstore$FlaskProjectBookstore.coverage" NAME="FlaskProjectBookstore Coverage Results" MODIFIED="1735467690462" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/FlaskProjectBookstore$FlaskProjectBookstore.coverage" NAME="FlaskProjectBookstore Coverage Results" MODIFIED="1735477287657" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/FlaskProjectBookstore$test_connection.coverage" NAME="test_connection Coverage Results" MODIFIED="1735464195027" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/FlaskProjectBookstore$config.coverage" NAME="config Coverage Results" MODIFIED="1735463921887" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
