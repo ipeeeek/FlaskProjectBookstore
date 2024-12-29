@@ -3,8 +3,56 @@ from app import app, Session
 from sqlalchemy import or_, text, exc
 from sqlalchemy.exc import SQLAlchemyError
 from utils import hash_password
-from models import Book, Customer
+from werkzeug.security import check_password_hash
+from models import Book, Customer, Cart
+from models import *
 
+from utils import check_password  # Import your custom check_password function
+
+def is_user_valid(email, password):
+    """Checks if the provided email and password are valid."""
+    db_session = Session()
+    try:
+        customer = db_session.query(Customer).filter_by(email=email).first()
+        if customer and check_password(password, customer.password_hash):  # Use your check_password function here
+            return True
+        return False
+    except Exception as e:
+        print(f"Error during user validation: {e}")
+    finally:
+        db_session.close()
+
+
+def get_customer_id(email):
+    """Retrieves the customer ID for a given email."""
+    db_session = Session()
+    try:
+        customer = db_session.query(Customer).filter_by(email=email).first()
+        if customer:
+            return customer.customer_id  # Assuming customer_id is the primary key
+        return None
+    except Exception as e:
+        print(f"Error getting customer ID: {e}")
+    finally:
+        db_session.close()
+
+def get_cart_id(customer_id):
+    """Retrieves the cart ID for a given customer ID."""
+    db_session = Session()
+    try:
+        # Assuming you have a Cart model with a foreign key to Customer
+        cart = db_session.query(Cart).filter_by(customer_id=customer_id).first()
+        if cart:
+            return cart.cart_id  # Return cart ID if cart exists
+        else:  # If customer doesn't have a cart, create one
+            new_cart = Cart(customer_id=customer_id)
+            db_session.add(new_cart)
+            db_session.commit()
+            return new_cart.cart_id  # Return the ID of the newly created cart
+    except Exception as e:
+        print(f"Error getting cart ID: {e}")
+    finally:
+        db_session.close()
 
 @app.route("/")
 def index():
@@ -39,30 +87,32 @@ def search():
         db_session.close()
 
     return render_template("index.html", books=search_results, query=query)
-
 @app.route("/cart")
 def view_cart():
     cart_items = []
     total_price = 0
-    if "cart" in flask_session:
-        db_session = Session()  # Renaming session to db_session
-        for book_id, quantity in flask_session["cart"].items():
-            book = db_session.query(Book).get(book_id)
-            if book:
-                cart_items.append({"book": book, "quantity": quantity})
-                total_price += book.price * quantity
-        db_session.close()
+    if 'customer_id' in flask_session:  # Ensure the user is logged in
+        customer_id = flask_session['customer_id']
+
+        db_session = Session()  # Initialize the SQLAlchemy session
+        try:
+            # Query the cart of the customer
+            cart = db_session.query(Cart).filter_by(customer_id=customer_id).first()
+            if cart:
+                # Assuming CartBook is a relationship with the Cart and Book models
+                cart_books = db_session.query(CartBook).filter_by(cart_id=cart.cart_id).all()
+                if cart_books:
+                    for cart_book in cart_books:
+                        book = db_session.query(Book).get(cart_book.book_id)  # Get the book details
+                        if book:
+                            cart_items.append({"book": book, "quantity": cart_book.quantity})
+                            total_price += book.price * cart_book.quantity
+        except SQLAlchemyError as e:
+            flash(f"An error occurred: {str(e)}", "danger")
+        finally:
+            db_session.close()
 
     return render_template("cart.html", cart_items=cart_items, total_price=total_price)
-
-
-@app.route("/remove_from_cart/<int:book_id>")
-def remove_from_cart(book_id):
-    if "cart" in flask_session and book_id in flask_session["cart"]:
-        del flask_session["cart"][book_id]
-        flask_session.modified = True
-    return redirect(url_for("cart"))
-
 
 @app.route("/process_order", methods=["POST"])
 def process_order():
@@ -171,16 +221,26 @@ def register_customer():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        # Your login logic here (e.g., authenticate user, set session, etc.)
         email = request.form.get("email")
         password = request.form.get("password")
 
-        # Perform authentication logic, e.g., compare with stored hashed password
+        # Your authentication logic here (e.g., compare with stored hashed password)
 
-        return redirect(url_for("index"))  # Redirect to home page after successful login
+        if is_user_valid(email, password):  # Replace with your authentication logic
+            # Login successful, set session variables
+            customer_id = get_customer_id(email)  # Replace with function to get customer ID
+            cart_id = get_cart_id(customer_id)  # Replace with function to get cart ID
+            flask_session['customer_id'] = customer_id
+            flask_session['cart_id'] = cart_id
+
+            flash("Login successful!", "success")
+            return redirect(url_for("index"))  # Redirect to desired page after login
+        else:
+            flash("Invalid login credentials.", "error")
+            return render_template("login.html")
 
     return render_template("login.html")  # Render login page for GET request
-
+@app.route('/add_to_cart/<int:book_id>', methods=['POST'])
 @app.route('/add_to_cart/<int:book_id>', methods=['POST'])
 def add_to_cart(book_id):
     # Ensure the user is logged in
@@ -206,4 +266,61 @@ def add_to_cart(book_id):
     finally:
         db_session.close()
 
-    return redirect(url_for('book_detail', book_id=book_id))
+    # Instead of redirecting to the book details page, redirect back to the cart
+    return redirect(url_for('view_cart'))  # Redirect to the cart page
+
+@app.route("/remove_from_cart/<int:book_id>", methods=["GET"])
+def remove_from_cart(book_id):
+    if 'customer_id' not in flask_session or 'cart_id' not in flask_session:
+        flash("You need to be logged in to remove books from the cart.", "danger")
+        return redirect(url_for('login'))
+
+    cart_id = flask_session['cart_id']
+
+    db_session = Session()  # Initialize the SQLAlchemy session
+    try:
+        # Execute stored procedure to remove book from cart
+        db_session.execute(
+            text("EXEC usp_remove_book_from_cart :cart_id, :book_id"),
+            {"cart_id": cart_id, "book_id": book_id}
+        )
+        db_session.commit()
+
+        flash("Book removed from cart successfully!", "success")
+    except SQLAlchemyError as e:
+        db_session.rollback()
+        flash(f"An error occurred: {str(e)}", "danger")
+    finally:
+        db_session.close()
+
+    # Redirect to the view_cart page
+    return redirect(url_for("view_cart"))
+
+@app.route("/remove_all_from_cart/<int:book_id>", methods=["GET"])
+def remove_all_from_cart(book_id):
+    """Removes all instances of a specific book from the user's cart."""
+
+    if 'customer_id' not in flask_session or 'cart_id' not in flask_session:
+        flash("You need to be logged in to remove books from the cart.", "danger")
+        return redirect(url_for('login'))
+
+    cart_id = flask_session['cart_id']
+    db_session = Session()
+
+    try:
+        # Efficiently delete all matching CartBook entries for the specific book in the cart
+        deleted_count = db_session.query(CartBook).filter_by(cart_id=cart_id, book_id=book_id).delete()
+        db_session.commit()
+
+        if deleted_count > 0:
+            flash(f"All instances of '{book_id}' have been removed from your cart.", "success")
+        else:
+            flash("This book is not in your cart.", "info")
+
+    except SQLAlchemyError as e:
+        db_session.rollback()
+        flash(f"An error occurred: {str(e)}", "danger")
+    finally:
+        db_session.close()
+
+    return redirect(url_for("view_cart"))

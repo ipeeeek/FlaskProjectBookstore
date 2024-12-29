@@ -1,38 +1,48 @@
 {% extends "base.html" %}
 
-{% block title %}Shopping Cart - Bookstore{% endblock %}
-
 {% block content %}
-<div class="container mt-4">
-    <h1 class="mb-4">Shopping Cart</h1>
-
+<div class="container">
+    <h1>Your Cart</h1>
     {% if cart_items %}
-        <div class="row">
-            <div class="col-12">
-                <ul class="list-group">
-                    {% for item in cart_items %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <h2>{{ item.book.title }}</h2>
-                                <p>Price: ${{ item.book.price }}</p>
-                                <p>Quantity: {{ item.quantity }}</p>
-                            </div>
-                            <a href="{{ url_for('remove_from_cart', book_id=item.book.book_id) }}" class="btn btn-danger">Remove</a>
-                        </li>
-                    {% endfor %}
-                </ul>
-
-                <div class="mt-4">
-                    <h3>Total Price: ${{ total_price }}</h3>
-                    <a href="/" class="btn btn-primary">Continue Shopping</a>
-                </div>
-            </div>
-        </div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Book</th>
+                <th>Price</th>
+                <th>Quantity</th>
+                <th>Total</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in cart_items %}
+            <tr>
+                <td>
+                    <img src="{{ item.book.image_url }}" alt="{{ item.book.title }}" style="width: 50px; height: 75px;">
+                    {{ item.book.title }}
+                </td>
+                <td>${{ item.book.price }}</td>
+                <td>
+                    <form action="{{ url_for('add_to_cart', book_id=item.book.book_id) }}" method="POST" style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-success">+</button>
+                    </form>
+                    <input type="number" name="quantity" value="{{ item.quantity }}" min="1" class="form-control d-inline-block w-auto" readonly>
+                    <form action="{{ url_for('remove_from_cart', book_id=item.book.book_id) }}" method="GET" style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-danger">-</button>
+                    </form>
+                </td>
+                <td>${{ item.book.price * item.quantity }}</td>
+                <td>
+                    <a href="{{ url_for('remove_all_from_cart', book_id=item.book.book_id) }}" class="btn btn-sm btn-danger">Remove</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <h3>Total Price: ${{ total_price }}</h3>
+    <a href="{{ url_for('process_order') }}" class="btn btn-primary">Proceed to Checkout</a>
     {% else %}
-        <div class="alert alert-info">
-            <p>Your cart is empty.</p>
-            <a href="/" class="btn btn-primary">Continue Shopping</a>
-        </div>
+    <p>Your cart is empty.</p>
     {% endif %}
 </div>
 {% endblock %}
