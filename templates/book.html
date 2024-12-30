@@ -3,20 +3,29 @@
 {% block title %}{{ book.title }} - Bookstore{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1>{{ book.title }}</h1>
-    <p><strong>ISBN:</strong> {{ book.isbn }}</p>
-    <p><strong>Price:</strong> ${{ book.price }}</p>
-    <p><strong>Synopsis:</strong> {{ book.synopsis }}</p>
+<div class="container mt-4">
+    <div class="row">
+        <!-- Book Cover and Information -->
+        <div class="col-md-4">
+            {% if book.cover_image_path %}
+                {% set image_filename = book.cover_image_path.split('/')[-1] if '/' in book.cover_image_path else book.cover_image_path %}
+                <img src="{{ url_for('static', filename='covers/' + image_filename) }}" alt="Book Cover" class="img-fluid rounded shadow-sm">
+            {% else %}
+                <img src="{{ url_for('static', filename='covers/default.jpg') }}" alt="No Cover Available" class="img-fluid rounded shadow-sm">
+            {% endif %}
+        </div>
 
-    {% if book.cover_image_path %}
-        {% set image_filename = book.cover_image_path.split('/')[-1] if '/' in book.cover_image_path else book.cover_image_path %}
-        <img src="{{ url_for('static', filename='covers/' + image_filename) }}" alt="Book Cover" class="img-fluid">
-    {% endif %}
+        <div class="col-md-8">
+            <h1>{{ book.title }}</h1>
+            <p><strong>ISBN:</strong> {{ book.isbn }}</p>
+            <p><strong>Price:</strong> <span class="h4">${{ book.price }}</span></p>
+            <p><strong>Synopsis:</strong> {{ book.synopsis }}</p>
 
-    <!-- Add to Cart Button -->
-    <form method="POST" action="{{ url_for('add_to_cart', book_id=book.book_id) }}" class="mt-3">
-        <button type="submit" class="btn btn-primary">Add to Cart</button>
-    </form>
+            <!-- Add to Cart Button -->
+            <form method="POST" action="{{ url_for('add_to_cart', book_id=book.book_id) }}" class="mt-4">
+                <button type="submit" class="btn btn-lg btn-primary shadow-sm">Add to Cart</button>
+            </form>
+        </div>
+    </div>
 </div>
 {% endblock %}

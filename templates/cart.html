@@ -18,7 +18,12 @@
             {% for item in cart_items %}
             <tr>
                 <td>
-                    <img src="{{ item.book.image_url }}" alt="{{ item.book.title }}" style="width: 50px; height: 75px;">
+                    {% if item.book.cover_image_path %}
+                        {% set image_filename = item.book.cover_image_path.split('/')[-1] if '/' in item.book.cover_image_path else item.book.cover_image_path %}
+                        <img src="{{ url_for('static', filename='covers/' + image_filename) }}" alt="{{ item.book.title }}" style="width: 50px; height: 75px;">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='covers/default_cover.jpg') }}" alt="Default Book Cover" style="width: 50px; height: 75px;">
+                    {% endif %}
                     {{ item.book.title }}
                 </td>
                 <td>${{ item.book.price }}</td>
