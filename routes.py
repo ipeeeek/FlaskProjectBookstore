@@ -2,26 +2,37 @@ from flask import request, render_template, session as flask_session, redirect, 
 from app import app, Session
 from sqlalchemy import or_, text, exc
 from sqlalchemy.exc import SQLAlchemyError
-from utils import hash_password
+from utils import hash_password, check_password
 from werkzeug.security import check_password_hash
 from models import Book, Customer, Cart
 from models import *
 
 from utils import check_password  # Import your custom check_password function
 
-def is_user_valid(email, password):
+# Utility functions
+def get_customer_by_id(customer_id):
+    db_session = Session()
+    try:
+        customer = db_session.query(Customer).get(customer_id)
+        return customer
+    except Exception as e:
+        print(f"Error getting customer: {e}")
+        return None
+    finally:
+        db_session.close()
+
+def is_customer_valid(email, password):
     """Checks if the provided email and password are valid."""
     db_session = Session()
     try:
         customer = db_session.query(Customer).filter_by(email=email).first()
-        if customer and check_password(password, customer.password_hash):  # Use your check_password function here
+        if customer and check_password(password, customer.password_hash):  # Use check_password here
             return True
         return False
     except Exception as e:
-        print(f"Error during user validation: {e}")
+        print(f"Error during customer validation: {e}")
     finally:
         db_session.close()
-
 
 def get_customer_id(email):
     """Retrieves the customer ID for a given email."""
@@ -29,7 +40,7 @@ def get_customer_id(email):
     try:
         customer = db_session.query(Customer).filter_by(email=email).first()
         if customer:
-            return customer.customer_id  # Assuming customer_id is the primary key
+            return customer.customer_id
         return None
     except Exception as e:
         print(f"Error getting customer ID: {e}")
@@ -40,19 +51,19 @@ def get_cart_id(customer_id):
     """Retrieves the cart ID for a given customer ID."""
     db_session = Session()
     try:
-        # Assuming you have a Cart model with a foreign key to Customer
         cart = db_session.query(Cart).filter_by(customer_id=customer_id).first()
         if cart:
-            return cart.cart_id  # Return cart ID if cart exists
-        else:  # If customer doesn't have a cart, create one
+            return cart.cart_id
+        else:
             new_cart = Cart(customer_id=customer_id)
             db_session.add(new_cart)
             db_session.commit()
-            return new_cart.cart_id  # Return the ID of the newly created cart
+            return new_cart.cart_id
     except Exception as e:
         print(f"Error getting cart ID: {e}")
     finally:
         db_session.close()
+
 
 @app.route("/")
 def index():
@@ -218,29 +229,7 @@ def register_customer():
             db_session.close()
 
     return render_template("register.html")
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        email = request.form.get("email")
-        password = request.form.get("password")
 
-        # Your authentication logic here (e.g., compare with stored hashed password)
-
-        if is_user_valid(email, password):  # Replace with your authentication logic
-            # Login successful, set session variables
-            customer_id = get_customer_id(email)  # Replace with function to get customer ID
-            cart_id = get_cart_id(customer_id)  # Replace with function to get cart ID
-            flask_session['customer_id'] = customer_id
-            flask_session['cart_id'] = cart_id
-
-            flash("Login successful!", "success")
-            return redirect(url_for("index"))  # Redirect to desired page after login
-        else:
-            flash("Invalid login credentials.", "error")
-            return render_template("login.html")
-
-    return render_template("login.html")  # Render login page for GET request
-@app.route('/add_to_cart/<int:book_id>', methods=['POST'])
 @app.route('/add_to_cart/<int:book_id>', methods=['POST'])
 def add_to_cart(book_id):
     # Ensure the user is logged in
@@ -324,3 +313,37 @@ def remove_all_from_cart(book_id):
         db_session.close()
 
     return redirect(url_for("view_cart"))
+
+@app.route("/login", methods=["POST", "GET"])
+def login():
+    if request.method == "POST":
+        email = request.form.get("email")
+        password = request.form.get("password")
+
+        # Check if customer is valid
+        if is_customer_valid(email, password):
+            customer_id = get_customer_id(email)
+
+            # Get customer details (name and surname) and store in session
+            db_session = Session()
+            customer = db_session.query(Customer).filter_by(customer_id=customer_id).first()
+            db_session.close()
+
+            if customer:
+                flask_session['customer_id'] = customer_id
+                flask_session['customer_name'] = customer.first_name
+                flask_session['customer_surname'] = customer.last_name
+
+            flash("Login successful!", "success")
+            return redirect(url_for("index"))
+        else:
+            flash("Invalid email or password", "error")
+            return render_template("login.html")
+
+    return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    flask_session.clear()  # Clear all session data
+    flash("You have logged out.", "success")
+    return redirect(url_for("index"))

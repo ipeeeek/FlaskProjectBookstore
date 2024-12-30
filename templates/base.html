@@ -39,6 +39,12 @@
             font-size: 1.4rem;
         }
 
+        .brand-symbol {
+            font-weight: bold;
+            font-size: 1.6rem;  /* Make the "R" slightly larger */
+            color: #d8b384; /* Match the color of the rest of the brand */
+        }
+
         .nav-link {
             color: #bda078 !important; /* Slightly darker beige for links */
             margin: 0 15px;
@@ -67,7 +73,8 @@
             margin-bottom: 5px;
             border-radius: 4px;
         }
-        .alert-info{
+
+        .alert-info {
             background-color: #333030;
             border-color: #444141;
             color: #d8b384;
@@ -83,22 +90,27 @@
             text-align: center;
             margin-top: 30px;
         }
-        a{
+
+        a {
             color: #bda078;
         }
-        a:hover{
+
+        a:hover {
             color: #e6c192;
         }
+
         img {
             max-width: 100%;
             border: 1px solid #444141;
             border-radius: 4px;
         }
-        .card{
+
+        .card {
             background-color: #333030;
             border: 1px solid #444141;
             color: #d8b384;
         }
+
         .quantity {
             display: flex;
             align-items: center;
@@ -108,19 +120,28 @@
             margin: 0 5px;
             background-color: #444141;
             border: none;
-            color:#d8b384;
+            color: #d8b384;
             padding: 5px 10px;
             border-radius: 5px;
         }
-        .quantity button:hover{
+
+        .quantity button:hover {
             background-color: #555252;
         }
     </style>
 </head>
 <body>
+
+    {% if 'customer_id' in session %}
+        <!-- Display the button if customer is logged in -->
+        <button class="position-absolute top-0 end-0 m-3" style="z-index: 1050;">
+            Welcome, {{ session['customer_name'] }} {{ session['customer_surname'] }}!
+        </button>
+    {% endif %}  <!-- Do not show anything if not logged in -->
+
     <nav class="navbar navbar-expand-lg">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">Books R Us</a>
+            <a class="navbar-brand" href="{{ url_for('index') }}">Books<span class="brand-symbol">“R”</span> Us</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -165,7 +186,7 @@
 
     <footer class="footer">
         <div class="container">
-        <p>&copy; 2024 Books R Us. All rights reserved.</p>
+            <p>&copy; 2024 Books R Us. All rights reserved.</p>
         </div>
     </footer>
 
