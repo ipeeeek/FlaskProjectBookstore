@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <h1>Your Cart</h1>
+<div class="container mt-4">
+    <h1 style="color: #d8b384;">Your Cart</h1>
     {% if cart_items %}
-    <table class="table table-striped">
+    <table class="table table-hover" style="background-color: #333030; color: #d8b384; border-color: #444141;">
         <thead>
-            <tr>
+            <tr style="background-color: #2f2c2c; color: #d8b384;">
                 <th>Book</th>
                 <th>Price</th>
                 <th>Quantity</th>
@@ -20,34 +20,36 @@
                 <td>
                     {% if item.book.cover_image_path %}
                         {% set image_filename = item.book.cover_image_path.split('/')[-1] if '/' in item.book.cover_image_path else item.book.cover_image_path %}
-                        <img src="{{ url_for('static', filename='covers/' + image_filename) }}" alt="{{ item.book.title }}" style="width: 50px; height: 75px;">
+                        <img src="{{ url_for('static', filename='covers/' + image_filename) }}" alt="{{ item.book.title }}" class="rounded shadow-sm border" style="width: 50px; height: 75px; border-color: #444141; margin-right: 10px;">
                     {% else %}
-                        <img src="{{ url_for('static', filename='covers/default_cover.jpg') }}" alt="Default Book Cover" style="width: 50px; height: 75px;">
+                        <img src="{{ url_for('static', filename='covers/default_cover.jpg') }}" alt="Default Book Cover" class="rounded shadow-sm border" style="width: 50px; height: 75px; border-color: #444141; margin-right: 10px;">
                     {% endif %}
                     {{ item.book.title }}
                 </td>
                 <td>${{ item.book.price }}</td>
                 <td>
-                    <form action="{{ url_for('add_to_cart', book_id=item.book.book_id) }}" method="POST" style="display:inline;">
-                        <button type="submit" class="btn btn-sm btn-success">+</button>
-                    </form>
-                    <input type="number" name="quantity" value="{{ item.quantity }}" min="1" class="form-control d-inline-block w-auto" readonly>
-                    <form action="{{ url_for('remove_from_cart', book_id=item.book.book_id) }}" method="GET" style="display:inline;">
-                        <button type="submit" class="btn btn-sm btn-danger">-</button>
-                    </form>
+                    <div class="quantity d-flex align-items-center">
+                        <form action="{{ url_for('add_to_cart', book_id=item.book.book_id) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-sm" style="background-color: #444141; color: #d8b384; width: 30px; height: 30px; padding: 0;">+</button>
+                        </form>
+                        <input type="number" name="quantity" value="{{ item.quantity }}" min="1" class="form-control quantity-input text-center mx-2" style="background-color: #2f2c2c; color: #d8b384; width: 60px;" readonly>
+                        <form action="{{ url_for('remove_from_cart', book_id=item.book.book_id) }}" method="GET" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-danger" style="background-color: #8a623f; border-color: #8a623f; width: 30px; height: 30px; padding: 0;">-</button>
+                        </form>
+                    </div>
                 </td>
                 <td>${{ item.book.price * item.quantity }}</td>
                 <td>
-                    <a href="{{ url_for('remove_all_from_cart', book_id=item.book.book_id) }}" class="btn btn-sm btn-danger">Remove</a>
+                    <a href="{{ url_for('remove_all_from_cart', book_id=item.book.book_id) }}" class="btn btn-sm btn-danger" style="background-color: #8a623f; border-color: #8a623f;">Remove</a>
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
-    <h3>Total Price: ${{ total_price }}</h3>
-    <a href="{{ url_for('process_order') }}" class="btn btn-primary">Proceed to Checkout</a>
+    <h3 style="color: #d8b384;">Total Price: ${{ total_price }}</h3>
+    <a href="{{ url_for('process_order') }}" class="btn btn-primary" style="background-color: #a67c52; border-color: #a67c52;">Proceed to Checkout</a>
     {% else %}
-    <p>Your cart is empty.</p>
+    <p style="color: #d8b384;">Your cart is empty.</p>
     {% endif %}
 </div>
 {% endblock %}

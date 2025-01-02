@@ -1,35 +1,17 @@
-body {
+body.my-custom-body { /* Add a class to the body */
     font-family: sans-serif;
-    margin: 20px;
-    background-color: #f0f0f0; /* Light gray background */
+    background-color: #f0f0f0;
 }
 
-h1 {
-    color: #333; /* Dark gray heading color */
-}
-
-ul {
-    list-style-type: none; /* Remove bullet points from lists */
-    padding: 0;
-}
-
-li {
+.my-custom-list li { /* Target list items within a specific class */
     margin-bottom: 10px;
-    border: 1px solid #ddd; /* Light gray border around list items */
+    border: 1px solid #ddd;
     padding: 10px;
     border-radius: 5px;
 }
 
-a {
-    color: blue;
-    text-decoration: none;
-}
-a:hover{
-    text-decoration: underline;
-}
-
-img {
-    max-width: 200px; /* Set a maximum width for images */
+.my-custom-image { /* Add a class to your images */
+    max-width: 200px;
     height: auto;
     display: block;
     margin: 10px auto;
