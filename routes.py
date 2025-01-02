@@ -2,9 +2,7 @@ from flask import request, render_template, session as flask_session, redirect, 
 from app import app, Session
 from sqlalchemy import or_, text, exc
 from sqlalchemy.exc import SQLAlchemyError
-from utils import hash_password, check_password
-from werkzeug.security import check_password_hash
-from models import Book, Customer, Cart
+from utils import hash_password
 from models import *
 
 from utils import check_password  # Import your custom check_password function
@@ -201,6 +199,8 @@ def process_order():
         finally:
             db_session.close()
     return render_template("process_order.html")
+
+
 @app.route("/register", methods=["POST", "GET"])
 def register_customer():
     if request.method == "POST":
@@ -212,12 +212,12 @@ def register_customer():
         password = request.form.get("password")
 
         # Get address information from the form
-        street_id = request.form.get("street_id")
-        neighborhood_id = request.form.get("neighborhood_id")
-        district_id = request.form.get("district_id")
-        province_id = request.form.get("province_id")
-        country_id = request.form.get("country_id")
-        postal_code_id = request.form.get("postal_code_id")
+        street_id = int(request.form.get("street_id"))
+        neighborhood_id = int(request.form.get("neighborhood_id"))
+        district_id = int(request.form.get("district_id"))
+        province_id = int(request.form.get("province_id"))
+        country_id = int(request.form.get("country_id"))
+        postal_code_id = int(request.form.get("postal_code_id"))
 
         # Validate password strength
         if len(password) < 8:
@@ -229,6 +229,7 @@ def register_customer():
         # Check if email already exists
         db_session = Session()
         existing_customer = db_session.query(Customer).filter_by(email=email).first()
+
         if existing_customer:
             flash("Email already in use. Please choose a different one.", "error")
             db_session.close()
@@ -237,16 +238,16 @@ def register_customer():
         try:
             # Execute the customer registration stored procedure
             result = db_session.execute(
-                text("""  
+                text("""
                     DECLARE @new_customer_id INT;
                     DECLARE @new_cart_id INT;
-                    EXEC usp_register_customer 
-                        :first_name, 
-                        :last_name, 
-                        :phone_number, 
-                        :email, 
-                        :password_hash, 
-                        @new_customer_id OUTPUT, 
+                    EXEC usp_register_customer
+                        :first_name,
+                        :last_name,
+                        :phone_number,
+                        :email,
+                        :password_hash,
+                        @new_customer_id OUTPUT,
                         @new_cart_id OUTPUT;
                     SELECT @new_customer_id AS new_customer_id, @new_cart_id AS new_cart_id;
                 """),
@@ -260,26 +261,33 @@ def register_customer():
             )
 
             # Fetch the customer_id and cart_id from the result
-            db_session.commit()
-            result_data = result.fetchone()  # Fetching both customer_id and cart_id at once
-            customer_id = result_data['new_customer_id']
-            cart_id = result_data['new_cart_id']
+            result_data = result.fetchone()
+
+            # Access the values by index (0 for new_customer_id, 1 for new_cart_id)
+            customer_id = result_data[0]  # First column is new_customer_id
+            cart_id = result_data[1]  # Second column is new_cart_id
+
+            if not customer_id:
+                flash("Customer registration failed, invalid customer ID.", "error")
+                return render_template("register.html")
 
             # Add the shipping address for the newly registered customer
             result = db_session.execute(
-                text(""" 
+                text("""
                     DECLARE @shipping_address_id INT;
-                    EXEC usp_add_shipping_address 
-                        :street_id, 
-                        :neighborhood_id, 
-                        :district_id, 
-                        :province_id, 
-                        :country_id, 
-                        :postal_code_id, 
+                    EXEC usp_add_shipping_address
+                        :customer_id,
+                        :street_id,
+                        :neighborhood_id,
+                        :district_id,
+                        :province_id,
+                        :country_id,
+                        :postal_code_id,
                         @shipping_address_id OUTPUT;
                     SELECT @shipping_address_id AS shipping_address_id;
                 """),
                 {
+                    "customer_id": customer_id,
                     "street_id": street_id,
                     "neighborhood_id": neighborhood_id,
                     "district_id": district_id,
@@ -289,9 +297,11 @@ def register_customer():
                 }
             )
 
-            # Fetch the shipping address id
+            # Commit the shipping address insertion
             db_session.commit()
-            shipping_address_id = result.scalar()  # Fetch the shipping address id
+
+            # Fetch the shipping address ID
+            shipping_address_id = result.scalar()  # Get the shipping address id (scalar will return the first value)
 
             # If we got the address id, proceed
             if shipping_address_id:
@@ -303,22 +313,25 @@ def register_customer():
 
         except SQLAlchemyError as e:
             db_session.rollback()
-            flash(f"Error registering customer: {str(e)}", "error")
+            error_message = str(e.__dict__['orig'])
+            flash(f"Error registering customer: {error_message}", "error")
             return render_template("register.html")
+
         finally:
             db_session.close()
 
     # Fetch address-related data for the form
     db_session = Session()
-    streets = db_session.query(Street).all()  # Assuming Street model exists
-    neighborhoods = db_session.query(Neighborhood).all()  # Assuming Neighborhood model exists
-    districts = db_session.query(District).all()  # Assuming District model exists
-    provinces = db_session.query(Province).all()  # Assuming Province model exists
-    countries = db_session.query(Country).all()  # Assuming Country model exists
-    postal_codes = db_session.query(PostalCode).all()  # Assuming PostalCode model exists
+    streets = db_session.query(Street).all()
+    neighborhoods = db_session.query(Neighborhood).all()
+    districts = db_session.query(District).all()
+    provinces = db_session.query(Province).all()
+    countries = db_session.query(Country).all()
+    postal_codes = db_session.query(PostalCode).all()
     db_session.close()
 
     return render_template("register.html", streets=streets, neighborhoods=neighborhoods, districts=districts, provinces=provinces, countries=countries, postal_codes=postal_codes)
+
 
 @app.route('/add_to_cart/<int:book_id>', methods=['POST'])
 def add_to_cart(book_id):
