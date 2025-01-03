@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 style="color: #d8b384;">Select Address and Payment Method</h1>
+
+    <form method="POST">
+        <!-- Shipping Address Selection -->
+        <div class="form-group">
+            <label for="shipping_address_id" style="color: #d8b384;">Select Shipping Address</label>
+            <select name="shipping_address_id" id="shipping_address_id" class="form-control" required>
+                {% for address in shipping_addresses %}
+                    <option value="{{ address.shipping_address_id }}">
+                        {{ address.street_address }}, {{ address.city }}, {{ address.zipcode }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Payment Method Selection -->
+        <div class="form-group mt-3">
+            <label for="payment_method_id" style="color: #d8b384;">Select Payment Method</label>
+            <select name="payment_method_id" id="payment_method_id" class="form-control" required>
+                {% for method in payment_methods %}
+                    <option value="{{ method.payment_method_id }}">{{ method.payment_method_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Credit Card Information -->
+        <div class="form-group mt-3">
+            <label for="card_number" style="color: #d8b384;">Card Number</label>
+            <input type="text" class="form-control" id="card_number" name="card_number" placeholder="Enter card number" required>
+        </div>
+
+        <div class="form-group mt-3">
+            <label for="expiration_date" style="color: #d8b384;">Expiration Date</label>
+            <input type="text" class="form-control" id="expiration_date" name="expiration_date" placeholder="MM/YY" required>
+        </div>
+
+        <div class="form-group mt-3">
+            <label for="cvv" style="color: #d8b384;">CVV</label>
+            <input type="text" class="form-control" id="cvv" name="cvv" placeholder="CVV" required>
+        </div>
+
+        <input type="hidden" name="total_amount" value="{{ total_amount }}">
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-primary mt-4" style="background-color: #a67c52; border-color: #a67c52;">
+            Complete Order
+        </button>
+    </form>
+</div>
+{% endblock %}

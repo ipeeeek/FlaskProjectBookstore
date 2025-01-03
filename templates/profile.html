@@ -1,92 +1,16 @@
 {% extends "base.html" %}
 
-{% block title %}Profile - Books R Us{% endblock %}
-
 {% block content %}
-<h1>Welcome to your Profile</h1>
+<h2>Profile</h2>
+<p>Name: {{ customer_name }} {{ customer_surname }}</p>
+<p>Email: {{ customer_email }}</p>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        <ul>
-            {% for category, message in messages %}
-                <li class="{{ category }}">{{ message }}</li>
-            {% endfor %}
-        </ul>
-    {% endif %}
-{% endwith %}
+<h3>Addresses</h3>
+<ul>
+    {% for address in addresses %}
+    <li>{{ address }}</li>
+    {% endfor %}
+</ul>
 
-{% if 'customer_id' in session %}
-    <div class="profile-info">
-        <h2>Your Information</h2>
-        <p><strong>Name:</strong> {{ session['customer_name'] }} {{ session['customer_surname'] }}</p>
-        <p><strong>Phone Number:</strong> {{ session['customer_phone_number'] or 'Not provided' }}</p>
-        <p><strong>Email:</strong> {{ session['customer_email'] }}</p>
-
-        <h3>Your Address</h3>
-        {% if session['customer_street_id'] %}
-            <p><strong>Street ID:</strong> {{ session['customer_street_id'] }}</p>
-            <p><strong>Neighborhood ID:</strong> {{ session['customer_neighborhood_id'] }}</p>
-            <p><strong>District ID:</strong> {{ session['customer_district_id'] }}</p>
-            <p><strong>Province ID:</strong> {{ session['customer_province_id'] }}</p>
-            <p><strong>Country ID:</strong> {{ session['customer_country_id'] }}</p>
-            <p><strong>Postal Code ID:</strong> {{ session['customer_postal_code_id'] }}</p>
-        {% else %}
-            <p>No address on file. Please add one.</p>
-        {% endif %}
-
-        <h3>Update Your Information</h3>
-        <form action="{{ url_for('update_customer') }}" method="POST">
-            <div>
-                <label for="new_phone_number">New Phone Number:</label>
-                <input type="text" name="new_phone_number" id="new_phone_number" required>
-            </div>
-            <div>
-                <label for="new_email">New Email:</label>
-                <input type="email" name="new_email" id="new_email" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Update Info</button>
-        </form>
-
-        <h3>Change Your Password</h3>
-        <form action="{{ url_for('update_customer_password') }}" method="POST">
-            <div>
-                <label for="new_password">New Password:</label>
-                <input type="password" name="new_password" id="new_password" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Update Password</button>
-        </form>
-
-        <h3>Add/Update Address</h3>
-        <form action="{{ url_for('add_shipping_address') }}" method="POST">
-            <div>
-                <label for="street_id">Street ID:</label>
-                <input type="number" name="street_id" id="street_id" required>
-            </div>
-            <div>
-                <label for="neighborhood_id">Neighborhood ID:</label>
-                <input type="number" name="neighborhood_id" id="neighborhood_id" required>
-            </div>
-            <div>
-                <label for="district_id">District ID:</label>
-                <input type="number" name="district_id" id="district_id" required>
-            </div>
-            <div>
-                <label for="province_id">Province ID:</label>
-                <input type="number" name="province_id" id="province_id" required>
-            </div>
-            <div>
-                <label for="country_id">Country ID:</label>
-                <input type="number" name="country_id" id="country_id" required>
-            </div>
-            <div>
-                <label for="postal_code_id">Postal Code ID:</label>
-                <input type="number" name="postal_code_id" id="postal_code_id" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Save Address</button>
-        </form>
-    </div>
-{% else %}
-    <p>You need to be logged in to view your profile.</p>
-    <a href="{{ url_for('login') }}">Login</a>
-{% endif %}
+<a href="{{ url_for('add_address') }}" class="btn btn-primary">Add New Address</a>
 {% endblock %}

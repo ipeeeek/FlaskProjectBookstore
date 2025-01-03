@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Address Information{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Address Information</h1>
+
+    <form method="post" action="{{ url_for('add_address') }}">
+        <div class="mb-3">
+            <label for="country_id" class="form-label">Country:</label>
+            <select id="country_id" name="country_id" class="form-control" onchange="loadProvinces()">
+                <option value="">Select Country</option>
+                {% for country in countries %}
+                    <option value="{{ country.country_id }}">{{ country.country_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="province_id" class="form-label">Province:</label>
+            <select id="province_id" name="province_id" class="form-control" onchange="loadDistricts()">
+                <option value="">Select Province</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="district_id" class="form-label">District:</label>
+            <select id="district_id" name="district_id" class="form-control" onchange="loadNeighborhoods(); loadPostalCodes()">
+                <option value="">Select District</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="neighborhood_id" class="form-label">Neighborhood:</label>
+            <select id="neighborhood_id" name="neighborhood_id" class="form-control" onchange="loadStreets()">
+                <option value="">Select Neighborhood</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="postal_code_id" class="form-label">Postal Code:</label>
+            <select id="postal_code_id" name="postal_code_id" class="form-control">
+                <option value="">Select Postal Code</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="street_id" class="form-label">Street:</label>
+            <select id="street_id" name="street_id" class="form-control">
+                <option value="">Select Street</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+
+    <script>
+        function loadDropdown(url, selectId) {
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const selectElement = document.getElementById(selectId);
+                    selectElement.innerHTML = '<option value="">Select</option>'; // Clear existing options
+
+                    let items = [];
+                    let id_key = "";
+                    let name_key = "";
+
+                    if(selectId === "province_id"){
+                        items = data.provinces;
+                        id_key = "province_id";
+                        name_key = "province_name";
+                    }
+                    else if(selectId === "district_id"){
+                        items = data.districts;
+                        id_key = "district_id";
+                        name_key = "district_name";
+                    }
+                    else if(selectId === "neighborhood_id"){
+                        items = data.neighborhoods;
+                        id_key = "neighborhood_id";
+                        name_key = "neighborhood_name";
+                    }
+                    else if(selectId === "postal_code_id"){
+                        items = data.postal_codes;
+                        id_key = "postal_code_id";
+                        name_key = "postal_code";
+                    }
+                    else if(selectId === "street_id"){
+                        items = data.streets;
+                        id_key = "street_id";
+                        name_key = "street_name";
+                    }
+
+                    if (items) {
+                        items.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item[id_key];
+                            option.text = item[name_key];
+                            selectElement.appendChild(option);
+                        });
+                    }
+                });
+        }
+
+        function loadProvinces() {
+            const countryId = document.getElementById('country_id').value;
+            if (countryId) {
+                loadDropdown(`/get_provinces?country_id=${countryId}`, 'province_id');
+            }
+        }
+
+        function loadDistricts() {
+            const provinceId = document.getElementById('province_id').value;
+            if (provinceId) {
+                loadDropdown(`/get_districts?province_id=${provinceId}`, 'district_id');
+            }
+        }
+
+        function loadNeighborhoods() {
+            const districtId = document.getElementById('district_id').value;
+            if (districtId) {
+                loadDropdown(`/get_neighborhoods?district_id=${districtId}`, 'neighborhood_id');
+            }
+        }
+
+        function loadPostalCodes() {
+            const districtId = document.getElementById('district_id').value;
+            if (districtId) {
+                loadDropdown(`/get_postal_codes?district_id=${districtId}`, 'postal_code_id');
+            }
+        }
+
+        function loadStreets() {
+            const neighborhoodId = document.getElementById('neighborhood_id').value;
+            if (neighborhoodId) {
+                loadDropdown(`/get_streets?neighborhood_id=${neighborhoodId}`, 'street_id');
+            }
+        }
+    </script>
+</div>
+{% endblock %}

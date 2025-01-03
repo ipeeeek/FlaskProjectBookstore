@@ -1,48 +1,52 @@
 {% extends "base.html" %}
 
-{% block title %}Process Order - Bookstore{% endblock %}
+{% block title %}Process Order{% endblock %}
 
 {% block content %}
 <div class="container mt-5">
     <h2>Process Order</h2>
 
-    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <div class="alert alert-info">
                 <ul>
-                {% for category, message in messages %}
-                    <li class="{{ category }}">{{ message }}</li>
-                {% endfor %}
+                    {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
                 </ul>
             </div>
         {% endif %}
     {% endwith %}
 
-    <!-- Order Form -->
-    <form method="POST" action="{{ url_for('process_order') }}">
-        <div class="mb-3">
-            <label for="customer_id" class="form-label">Customer ID</label>
-            <input type="number" name="customer_id" id="customer_id" class="form-control" placeholder="Enter customer ID" required>
-        </div>
-        <div class="mb-3">
-            <label for="shipping_address_id" class="form-label">Shipping Address ID</label>
-            <input type="number" name="shipping_address_id" id="shipping_address_id" class="form-control" placeholder="Enter shipping address ID" required>
-        </div>
-        <div class="mb-3">
-            <label for="order_status_id" class="form-label">Order Status ID</label>
-            <input type="number" name="order_status_id" id="order_status_id" class="form-control" placeholder="Enter order status ID" required>
-        </div>
-        <div class="mb-3">
-            <label for="payment_id" class="form-label">Payment ID</label>
-            <input type="number" name="payment_id" id="payment_id" class="form-control" placeholder="Enter payment ID" required>
-        </div>
-        <div class="mb-3">
-            <label for="total_amount" class="form-label">Total Amount</label>
-            <input type="number" name="total_amount" id="total_amount" class="form-control" placeholder="Enter total amount" required>
-        </div>
+    {% if total_amount == 0 %}
+        <p>Your cart is empty. You cannot proceed with an empty cart.</p>
+        <a href="{{ url_for('view_cart') }}" class="btn btn-primary">Go to Cart</a>
+    {% else %}
+        <p>Total Amount: ${{ total_amount }}</p>
 
-        <button type="submit" class="btn btn-primary">Process Order</button>
-    </form>
+        <form method="POST">
+            <h3>Select Shipping Address</h3>
+            <select class="form-select" name="shipping_address_id" required>
+                <option value="">Select Address</option>
+                {% for address in formatted_addresses %}
+                    <option value="{{ address.shipping_address_id }}">
+                        {{ address.full_address }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <h3>Select Payment Method</h3>
+            <select class="form-select" name="payment_method_id" required>
+                <option value="">Select Payment Method</option>
+                {% for method in payment_methods %}
+                    <option value="{{ method.payment_method_id }}">
+                        {{ method.payment_method_name }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <button type="submit" class="btn btn-primary mt-3">Place Order</button>
+        </form>
+    {% endif %}
 </div>
 {% endblock %}
