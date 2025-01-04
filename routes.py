@@ -1193,3 +1193,201 @@ def admin_dashboard():
     revenue = get_revenue()
 
     return render_template('admin/dashboard.html', admin_name=admin_name, admin_surname=admin_surname, admin_email=admin_email, revenue=revenue)
+@app.route('/admin/add_book', methods=['GET', 'POST'])
+def add_book():
+    db_session = Session()
+
+    if request.method == 'POST':
+        try:
+            # Retrieve form data
+            title = request.form['title']
+            isbn = request.form['isbn']
+            publication_date = request.form['publication_date']
+            cover_image_path = request.form['cover_image_path']
+            synopsis = request.form['synopsis']
+            price = request.form['price']
+            stock_quantity = request.form['stock_quantity']
+            page_count = request.form['page_count']
+            author_id = request.form['author_id']  # Get author_id from the form
+
+            # Retrieve the selected values for dropdown options
+            dimension_id = request.form['dimension_id']
+            book_format_id = request.form['book_format_id']
+            book_language_id = request.form['book_language_id']
+            publisher_id = request.form['publisher_id']
+
+            # Execute the stored procedure to insert the new book
+            conn = db_session.connection()
+            result = conn.execute(
+                text("""
+                    DECLARE @new_book_id INT;
+                    EXEC usp_add_book :title, :isbn, :publication_date, :cover_image_path, 
+                                       :synopsis, :price, :stock_quantity, :page_count, NULL, 
+                                       :dimension_id, :book_format_id, :book_language_id, :publisher_id, 
+                                       @new_book_id OUTPUT;
+                    SELECT @new_book_id AS new_book_id;
+                """),
+                {
+                    'title': title,
+                    'isbn': isbn,
+                    'publication_date': publication_date,
+                    'cover_image_path': cover_image_path,
+                    'synopsis': synopsis,
+                    'price': price,
+                    'stock_quantity': stock_quantity,
+                    'page_count': page_count,
+                    'dimension_id': dimension_id,
+                    'book_format_id': book_format_id,
+                    'book_language_id': book_language_id,
+                    'publisher_id': publisher_id
+                }
+            )
+
+            # Retrieve the newly inserted book's ID
+            new_book_id = result.scalar()
+
+            if not new_book_id:
+                raise ValueError("Failed to retrieve new book ID. The book was not inserted correctly.")
+
+            # Link the book to the author AFTER the book is created
+            conn.execute(
+                text("""
+                    INSERT INTO book_author (book_id, author_id, created_at, updated_at)
+                    VALUES (:book_id, :author_id, GETDATE(), GETDATE())
+                """),
+                {'book_id': new_book_id, 'author_id': author_id}
+            )
+
+            conn.commit()  # Commit the transaction
+            flash('Book added successfully!', 'success')
+            return redirect(url_for('admin_dashboard'))
+
+        except Exception as e:
+            db_session.rollback()  # Rollback on error
+            flash(f'Error adding book: {str(e)}', 'danger')
+            return redirect(url_for('add_book'))  # Redirect to the form again
+
+        finally:
+            db_session.close()
+
+    # GET request: Render the form
+    dimensions = db_session.query(Dimension).all()
+    book_formats = db_session.query(BookFormat).all()
+    book_languages = db_session.query(BookLanguage).all()
+    publishers = db_session.query(Publisher).all()
+    authors = db_session.query(Author).all()
+    db_session.close()
+
+    return render_template(
+        'admin/add_book.html',
+        dimensions=dimensions,
+        book_formats=book_formats,
+        book_languages=book_languages,
+        publishers=publishers,
+        authors=authors
+    )
+
+# Remove Book Route
+@app.route('/admin/remove_book/<int:book_id>', methods=['POST'])
+def remove_book(book_id):
+    db_session = Session()  # Create a new session instance
+
+    try:
+        book = db_session.query(Book).get(book_id)  # Fetch the book by ID
+        if not book:
+            flash('Book not found!', 'danger')
+            return redirect(url_for('admin_dashboard'))
+
+        db_session.delete(book)
+        db_session.commit()
+        flash('Book removed successfully!', 'success')
+    except Exception as e:
+        db_session.rollback()
+        flash(f'Error removing book: {str(e)}', 'danger')
+    finally:
+        db_session.close()
+
+    return redirect(url_for('admin_dashboard'))
+
+# Update Book Route
+@app.route('/admin/update_book/<int:book_id>', methods=['GET', 'POST'])
+def update_book(book_id):
+    db_session = Session()  # Create a new session instance
+
+    book = db_session.query(Book).get(book_id)  # Fetch the current book details
+    if not book:
+        flash('Book not found!', 'danger')
+        return redirect(url_for('admin_dashboard'))
+
+    if request.method == 'POST':
+        title = request.form['title']
+        isbn = request.form['isbn']
+        publication_date = request.form['publication_date']
+        cover_image_path = request.form['cover_image_path']
+        synopsis = request.form['synopsis']
+        price = request.form['price']
+        stock_quantity = request.form['stock_quantity']
+        page_count = request.form['page_count']
+
+        try:
+            book.title = title
+            book.isbn = isbn
+            book.publication_date = publication_date
+            book.cover_image_path = cover_image_path
+            book.synopsis = synopsis
+            book.price = price
+            book.stock_quantity = stock_quantity
+            book.page_count = page_count
+
+            db_session.commit()
+            flash('Book updated successfully!', 'success')
+        except Exception as e:
+            db_session.rollback()
+            flash(f'Error updating book: {str(e)}', 'danger')
+        finally:
+            db_session.close()
+
+        return redirect(url_for('admin_dashboard'))
+
+    # Display the current book data in the form for editing
+    return render_template('admin/update_book.html', book=book)
+
+from datetime import datetime
+
+@app.route('/admin/add_author', methods=['GET', 'POST'])
+def add_author():
+    if request.method == 'POST':
+        first_name = request.form['first_name']
+        last_name = request.form['last_name']
+        bio = request.form.get('bio')  # Optional field
+        path_to_image = request.form.get('path_to_image')  # Optional field
+
+        db_session = Session()  # Start a session
+        try:
+            # Check if the author already exists
+            existing_author = db_session.query(Author).filter_by(first_name=first_name, last_name=last_name).first()
+            if existing_author:
+                flash('Author already exists!', 'warning')
+                return redirect(url_for('add_author'))
+
+            # Add the new author with explicit timestamps
+            new_author = Author(
+                first_name=first_name,
+                last_name=last_name,
+                bio=bio,
+                path_to_image=path_to_image,
+                created_at=datetime.utcnow(),  # Explicitly set created_at
+                updated_at=datetime.utcnow()   # Explicitly set updated_at
+            )
+            db_session.add(new_author)
+            db_session.commit()
+            flash('Author added successfully!', 'success')
+        except Exception as e:
+            db_session.rollback()
+            flash(f'Error adding author: {str(e)}', 'danger')
+        finally:
+            db_session.close()
+
+        return redirect(url_for('admin_dashboard'))
+
+    return render_template('admin/add_author.html')

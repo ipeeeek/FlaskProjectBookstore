@@ -9,10 +9,16 @@
     <h2>Total Revenue</h2>
     <p><strong>${{ revenue }}</strong></p>
 
-    <!-- Add a button to view orders -->
-    <form action="{{ url_for('view_orders') }}" method="get">
-        <button type="submit">View Orders</button>
+    <!-- Add buttons for admin actions -->
+    <form action="{{ url_for('view_orders') }}" method="get" class="mb-3">
+        <button type="submit" class="btn btn-secondary">View Orders</button>
     </form>
 
-    <!-- Add any other dashboard elements here -->
+    <form action="{{ url_for('add_book') }}" method="get" class="mb-3">
+        <button type="submit" class="btn btn-secondary">Add Book</button>
+    </form>
+
+    <form action="{{ url_for('add_author') }}" method="get" class="mb-3">
+        <button type="submit" class="btn btn-secondary">Add Author</button>
+    </form>
 {% endblock %}
