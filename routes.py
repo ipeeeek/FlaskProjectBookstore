@@ -1,12 +1,23 @@
 from flask import request, render_template, session as flask_session, redirect, url_for, flash, jsonify
+from sqlalchemy.orm import joinedload
+from datetime import datetime
 from app import app, Session
 from sqlalchemy import or_, text, exc
 from sqlalchemy.exc import SQLAlchemyError
-from utils import hash_password
+from utils import hash_password, check_password
 from models import *
+import pyodbc
 
-from utils import check_password  # Import your custom check_password function
+def get_revenue(start_date=None, end_date=None):
+    db_session = Session()
+    query = text("""
+        SELECT dbo.fn_calculate_revenue(:start_date, :end_date) AS revenue
+    """)
+    result = db_session.execute(query, {"start_date": start_date, "end_date": end_date}).fetchone()
+    db_session.close()
 
+    # Access the result using index, not dictionary key
+    return result[0] if result else 0.0
 @app.route('/get_provinces', methods=['GET'])
 def get_provinces():
     db_session = Session()
@@ -74,6 +85,20 @@ def is_customer_valid(email, password):
     finally:
         db_session.close()
 
+def is_admin_valid(email, password):
+    """Checks if the provided admin email and password are valid."""
+    db_session = Session()
+    try:
+        admin_user = db_session.query(AdminUser).filter_by(email=email).first()
+        if admin_user and check_password(password, admin_user.password_hash):  # Use check_password here
+            return True
+        return False
+    except Exception as e:
+        print(f"Error during admin validation: {e}")
+    finally:
+        db_session.close()
+
+
 def get_customer_id(email):
     """Retrieves the customer ID for a given email."""
     db_session = Session()
@@ -86,6 +111,21 @@ def get_customer_id(email):
         print(f"Error getting customer ID: {e}")
     finally:
         db_session.close()
+
+def get_admin_user_id(email):
+    """Retrieves the admin user ID for a given email."""
+    db_session = Session()
+    try:
+        # Query the AdminUser table to find the admin by email
+        admin_user = db_session.query(AdminUser).filter_by(email=email).first()
+        if admin_user:
+            return admin_user.admin_user_id  # Return the admin user ID
+        return None  # Return None if no admin user is found
+    except Exception as e:
+        print(f"Error getting admin user ID: {e}")
+    finally:
+        db_session.close()  # Ensure the session is closed
+
 
 def get_cart_id(customer_id):
     """Retrieves the cart ID for a given customer ID."""
@@ -113,16 +153,108 @@ def index():
     return render_template("index.html", books=books)
 
 
-@app.route("/book/<int:book_id>")
+@app.route("/book/<int:book_id>", methods=["GET"])
 def book_detail(book_id):
-    db_session = Session()  # Renaming session to db_session
-    book = db_session.query(Book).get(book_id)
+    db_session = Session()  # Initialize the database session
+
+    # Fetch book details with related data using joinedload for eager loading
+    book = db_session.query(Book).options(
+        joinedload(Book.dimension),
+        joinedload(Book.book_format),
+        joinedload(Book.book_language),
+        joinedload(Book.publisher)
+    ).filter_by(book_id=book_id).first()
+
+    # Check if the book exists
+    if not book:
+        db_session.close()
+        flash("Book not found.", "error")
+        return redirect(url_for("index"))  # Redirect to the homepage if the book is not found
+
+    # Fetch the average rating using the SQL Server function
+    result = db_session.execute(
+        text("SELECT dbo.fn_calculate_average_rating(:book_id) AS average_rating"),
+        {'book_id': book_id}
+    ).fetchone()
+    book.average_rating = round(result.average_rating, 1) if result and result.average_rating is not None else None
+    # Check if the user has already rated the book
+    already_rated = False
+    if 'customer_id' in flask_session:
+        customer_id = flask_session['customer_id']
+        existing_rating = db_session.query(Rating).filter_by(customer_id=customer_id, book_id=book_id).first()
+        if existing_rating:
+            already_rated = True
+
     db_session.close()
-    if book is None:
-        return "Book not found", 404
-    return render_template("book.html", book=book)
 
+    # Render the book detail template with all the relevant data
+    return render_template(
+        "book.html",
+        book=book,
+        dimension=book.dimension,
+        book_format=book.book_format,
+        language=book.book_language,
+        publisher=book.publisher
+    )
 
+@app.route('/rate_book/<int:book_id>', methods=['POST'])
+def rate_book(book_id):
+    db_session = Session()
+    rating_value = request.form.get('rating', type=int)  # Explicitly convert to int
+
+    # Validate rating value
+    if rating_value is None or rating_value < 1 or rating_value > 5:
+        return "Invalid rating value. Please select a rating between 1 and 5.", 400
+
+    # Check if the customer is logged in via session
+    if 'customer_id' not in flask_session:
+        flash("You need to be logged in to rate a book.", "error")
+        return redirect(url_for("login"))  # Redirect to login if not logged in
+
+    # Fetch customer data from the session
+    customer_id = flask_session['customer_id']
+
+    # Check if the user has already rated this book
+    existing_rating = db_session.query(Rating).filter_by(customer_id=customer_id, book_id=book_id).first()
+    if existing_rating:
+        db_session.close()
+        flash("You have already rated this book.", "error")
+        return redirect(url_for('book_detail', book_id=book_id))  # Redirect to book detail page if already rated
+
+    # Fetch the book to be rated
+    book = db_session.query(Book).filter_by(book_id=book_id).first()
+    if not book:
+        db_session.close()
+        flash("Book not found.", "error")
+        return redirect(url_for("index"))  # Redirect to the homepage if book is not found
+
+    # Insert the rating without using OUTPUT clause
+    try:
+        # Manually perform the insert without using OUTPUT clause
+        sql = text("""
+            INSERT INTO rating (customer_id, book_id, rating_value, created_at, updated_at)
+            VALUES (:customer_id, :book_id, :rating_value, :created_at, :updated_at)
+        """)
+
+        db_session.execute(sql, {
+            'customer_id': customer_id,
+            'book_id': book_id,
+            'rating_value': rating_value,
+            'created_at': datetime.now(),
+            'updated_at': datetime.now()
+        })
+
+        # Commit the transaction
+        db_session.commit()
+
+    except Exception as e:
+        db_session.rollback()
+        print(f"Error while submitting rating: {e}")
+        return "An error occurred while submitting your rating.", 500
+
+    db_session.close()
+    flash("Your rating has been submitted successfully!", "success")
+    return redirect(url_for('book_detail', book_id=book_id))
 @app.route("/search")
 def search():
     query = request.args.get("q")
@@ -138,6 +270,49 @@ def search():
         db_session.close()
 
     return render_template("index.html", books=search_results, query=query)
+
+
+@app.route('/admin/orders')
+def view_orders():
+    db_session = Session()
+    # Check if the admin is logged in by checking the session
+    if 'admin_user_id' not in flask_session:
+        flash("You must be logged in to access this page.", "error")
+        return redirect(url_for('admin_login'))  # Redirect to the login page
+
+    # Fetch all orders from the customer_order table
+    orders = db_session.query(CustomerOrder).all()
+
+    return render_template('admin/view_orders.html', orders=orders)
+
+from sqlalchemy import text
+
+@app.route('/admin/view_order_details/<int:order_id>')
+def view_order_details(order_id):
+    db_session = Session()
+
+    # Query for the order using the order_id
+    order = db_session.query(CustomerOrder).filter(CustomerOrder.customer_order_id == order_id).first()
+
+    if not order:
+        flash("Order not found.", "error")
+        return redirect(url_for('admin/view_orders'))  # Redirect to orders list if order is not found
+
+    # Retrieve the full address using the fn_format_full_address function
+    address_query = text("""
+        SELECT dbo.fn_format_full_address(:shipping_address_id) AS full_address
+    """)
+    result = db_session.execute(address_query, {'shipping_address_id': order.shipping_address_id}).fetchone()
+
+    if result:
+        # Access the result by index if necessary
+        full_address = result[0]  # This will be the first column (full_address)
+    else:
+        full_address = None
+
+    # Pass the order and full address to the template
+    return render_template('admin/view_order_details.html', order=order, full_address=full_address)
+
 @app.route("/cart")
 def view_cart():
     cart_items = []
@@ -172,104 +347,74 @@ def view_cart():
 
     return render_template("cart.html", cart_items=cart_items, total_price=total_price)
 
-from datetime import datetime
-
 @app.route("/process_order", methods=["GET", "POST"])
 def process_order():
-    # Step 1: Handle the GET request to display the shipping address selection
+    # Handle GET request to display shipping address and payment details
     if request.method == "GET":
-        customer_id = flask_session.get('customer_id')  # Get customer ID from session
+        customer_id = flask_session.get('customer_id')
         db_session = Session()
 
         try:
-            # Get the cart ID for the customer (you would probably fetch this from the session or database)
-            cart_id = flask_session.get('cart_id')  # Example, make sure to set this in the session when adding items to the cart
-
-            # Call the fn_calculate_cart_total function to get the total cost of the cart
+            # Get cart ID from session and calculate total amount
+            cart_id = flask_session.get('cart_id')
             result = db_session.execute(
                 text("SELECT dbo.fn_calculate_cart_total(:cart_id) AS cart_total"),
                 {"cart_id": cart_id}
             ).fetchone()
+            total_amount = result[0]  # Extract total amount from result
 
-            total_amount = result[0]  # Extract the total cost from the result
-
-            # Debugging: Print the total amount
-            print(f"Total Amount: {total_amount}")
-
-            # Get all shipping addresses for the customer
+            # Retrieve all shipping addresses for the customer
             addresses = db_session.query(ShippingAddress).filter_by(customer_id=customer_id).all()
-
-            # Format addresses
-            formatted_addresses = []
-            for address in addresses:
-                result = db_session.execute(
-                    text("SELECT dbo.fn_format_full_address(:shipping_address_id) AS full_address"),
-                    {"shipping_address_id": address.shipping_address_id}
-                ).fetchone()
-
-                # Append the formatted address to the list
-                formatted_addresses.append({
+            formatted_addresses = [
+                {
                     'shipping_address_id': address.shipping_address_id,
-                    'full_address': result[0]
-                })
+                    'full_address': db_session.execute(
+                        text("SELECT dbo.fn_format_full_address(:shipping_address_id) AS full_address"),
+                        {"shipping_address_id": address.shipping_address_id}
+                    ).fetchone()[0]
+                }
+                for address in addresses
+            ]
 
             payment_methods = db_session.query(PaymentMethod).all()  # Retrieve payment methods
 
-            return render_template("select_address.html",
-                                   shipping_addresses=formatted_addresses,
+            return render_template("process_order.html",
+                                   formatted_addresses=formatted_addresses,
                                    payment_methods=payment_methods,
                                    total_amount=total_amount)
 
         except SQLAlchemyError as e:
-            flash(f"Error retrieving shipping addresses: {str(e)}", "danger")
+            flash(f"Error retrieving data: {str(e)}", "danger")
         finally:
             db_session.close()
 
-    # Step 2: Handle the POST request to process the payment and complete the order
+    # Handle POST request to process payment and complete the order
     elif request.method == "POST":
         customer_id = flask_session.get('customer_id')
         shipping_address_id = request.form.get('shipping_address_id')
         payment_method_id = request.form.get('payment_method_id')
-        card_number = request.form.get('card_number')
-        expiration_date = request.form.get('expiration_date')
-        cvv = request.form.get('cvv')
 
-        # Retrieve total_amount from the session
-        total_amount = flask_session.get('total_amount')
+        # Retrieve the total amount from session or re-calculate it
+        total_amount = flask_session.get('total_amount') or calculate_cart_total()
 
-        # If total amount is not set, calculate it using the function
-        if not total_amount:
-            cart_id = flask_session.get('cart_id')  # Get cart ID from session
-            db_session = Session()
-            try:
-                result = db_session.execute(
-                    text("SELECT dbo.fn_calculate_cart_total(:cart_id) AS cart_total"),
-                    {"cart_id": cart_id}
-                ).fetchone()
-                total_amount = result[0]  # Assign the calculated total to total_amount
-            except SQLAlchemyError as e:
-                flash(f"Error calculating cart total: {str(e)}", "danger")
-                return redirect(url_for('view_cart'))  # Redirect back to the cart in case of error
-            finally:
-                db_session.close()
-
-        # Proceed to create the payment record and process the order
         db_session = Session()
         try:
-            # Create the Payment object and set created_at and updated_at
+            # Insert payment record first
             payment = Payment(
                 customer_id=customer_id,
                 payment_method_id=payment_method_id,
                 total_amount=total_amount,
-                payment_status_id=1,  # Explicitly set payment_status_id to 1 (pending)
-                created_at=datetime.now(),  # Set current timestamp
-                updated_at=datetime.now()   # Set current timestamp
+                payment_status_id=1,  # Set initial payment status to Pending
+                created_at=datetime.now(),
+                updated_at=datetime.now()
             )
             db_session.add(payment)
             db_session.commit()
+
+            # Get the generated payment_id
             payment_id = payment.payment_id
 
-            # Execute stored procedure to process the order
+            # Call stored procedure to process the order
             order_id_result = db_session.execute(text(""" 
                 DECLARE @order_id INT;
                 EXEC usp_process_order 
@@ -282,29 +427,55 @@ def process_order():
             """), {
                 "customer_id": customer_id,
                 "shipping_address_id": shipping_address_id,
-                "payment_id": payment_id,  # Use the payment_id from the Payment object
+                "payment_id": payment_id,
                 "total_amount": total_amount
             })
             db_session.commit()
 
-            # Retrieve the order ID
-            order_id = db_session.execute(text("SELECT @order_id")).scalar()
+            # Retrieve the order ID and other details
+            order_id = order_id_result.scalar()
+            flask_session['order_id'] = order_id
 
-            # Fetch shipping address and payment method details
-            shipping_address = db_session.query(ShippingAddress).filter_by(
-                shipping_address_id=shipping_address_id).first()
+            # Fetch formatted shipping address using the custom function
+            shipping_address = db_session.execute(
+                text("SELECT dbo.fn_format_full_address(:shipping_address_id) AS full_address"),
+                {"shipping_address_id": shipping_address_id}
+            ).fetchone()[0]
+
             payment_method = db_session.query(PaymentMethod).filter_by(payment_method_id=payment_method_id).first()
+            order_status = db_session.query(OrderStatus).filter_by(order_status_id=1).first()
+            customer_books = db_session.query(CustomerOrderBook).filter_by(customer_order_id=order_id).all()
 
-            # Display the order summary
-            return render_template("order_summary.html", order_id=order_id, total_amount=total_amount,
-                                   shipping_address=shipping_address, payment_method=payment_method)
+            # Flash success message
+            flash(f"Your order #{order_id} has been successfully placed!", "success")
+
+            return redirect(url_for('order_summary', order_id=order_id))
+
+        except pyodbc.Error as e:
+            return redirect(url_for('order_summary'))  # Redirect to cart page on error
 
         except SQLAlchemyError as e:
             db_session.rollback()
-            flash(f"Error processing order: {str(e)}", "danger")
-            return redirect(url_for('view_cart'))
+            return redirect(url_for('order_summary'))  # If SQLAlchemyError occurs, go back to cart page
+
         finally:
             db_session.close()
+
+def calculate_cart_total():
+    # If total_amount is not in session, calculate the total based on the cart_id
+    cart_id = flask_session.get('cart_id')
+    db_session = Session()
+    try:
+        result = db_session.execute(
+            text("SELECT dbo.fn_calculate_cart_total(:cart_id) AS cart_total"),
+            {"cart_id": cart_id}
+        ).fetchone()
+        return result[0]  # Return the calculated total
+    except SQLAlchemyError as e:
+        flash(f"Error calculating cart total: {str(e)}", "danger")
+        return redirect(url_for('view_cart'))
+    finally:
+        db_session.close()
 
 
 @app.route("/register", methods=["POST", "GET"])
@@ -687,9 +858,65 @@ def add_address():
 def settings():  # Changed function name from 'profile' to 'settings'
     return "Settings page is under construction", 200
 
-@app.route('/orders')
-def orders():  # Changed function name from 'profile' to 'settings'
-    return "Orders page is under construction", 200
+@app.route('/orders', methods=['GET'])
+def orders():
+    db_session = Session()  # Assuming this is a SQLAlchemy session instance
+    # Ensure the user is logged in
+    if 'customer_id' not in flask_session:
+        flash('You need to log in to view your orders.')
+        return redirect(url_for('login'))
+
+    customer_id = flask_session.get('customer_id')  # Access session data correctly
+    try:
+        # Query the orders for the current customer
+        orders_query = db_session.execute(text(""" 
+            SELECT 
+                co.customer_order_id,
+                co.shipping_address_id,
+                co.total_amount,
+                co.created_at,
+                os.order_status_name AS order_status_name
+            FROM customer_order co
+            JOIN order_status os ON co.order_status_id = os.order_status_id
+            WHERE co.customer_id = :customer_id
+        """), {"customer_id": customer_id}).fetchall()
+
+        orders = []
+        for order in orders_query:
+            # Fetch the full formatted address
+            full_address_result = db_session.execute(text(""" 
+                SELECT dbo.fn_format_full_address(:shipping_address_id) AS full_address
+            """), {"shipping_address_id": order.shipping_address_id}).fetchone()
+            full_address = full_address_result.full_address if full_address_result else "Address Not Available"
+
+            # Query the books associated with the order
+            books_query = db_session.execute(text(""" 
+                SELECT 
+                    b.title,
+                    cob.quantity
+                FROM customer_order_book cob
+                JOIN book b ON cob.book_id = b.book_id
+                WHERE cob.customer_order_id = :customer_order_id
+            """), {"customer_order_id": order.customer_order_id}).fetchall()
+
+            books = [{"title": book.title, "quantity": book.quantity} for book in books_query]
+
+            # Add the order details to the list
+            orders.append({
+                "order_id": order.customer_order_id,
+                "created_at": order.created_at,
+                "total_amount": order.total_amount,
+                "order_status_name": order.order_status_name,
+                "shipping_address": full_address,
+                "books": books
+            })
+
+        return render_template('orders.html', orders=orders)
+    except Exception as e:
+        # Log and show error if something goes wrong
+        print(f"Error retrieving orders: {e}")
+        flash('Error retrieving orders.')
+        return render_template('orders.html', orders=[])
 
 @app.route('/update_customer', methods=['POST'])
 def update_customer():
@@ -793,3 +1020,176 @@ def update_admin_password():
         return render_template("update_admin_password.html")
     finally:
         db_session.close()
+
+from flask import render_template
+
+
+@app.route('/order_summary')
+def order_summary():
+    # Retrieve the customer_id from session
+    customer_id = flask_session.get('customer_id')
+
+    if not customer_id:
+        return "Customer not found", 404  # Handle case when customer_id is not available in session
+
+    db_session = Session()
+    try:
+        # Fetch the latest order for the customer
+        order = db_session.query(CustomerOrder, ShippingAddress, PaymentMethod, OrderStatus). \
+            join(ShippingAddress, ShippingAddress.shipping_address_id == CustomerOrder.shipping_address_id). \
+            join(PaymentMethod, PaymentMethod.payment_method_id == CustomerOrder.payment_id). \
+            join(OrderStatus, OrderStatus.order_status_id == CustomerOrder.order_status_id). \
+            filter(CustomerOrder.customer_id == customer_id). \
+            order_by(CustomerOrder.created_at.desc()). \
+            first()  # Get the most recent order for the customer
+
+        if not order:
+            return "Order not found", 404  # Handle case where no order is found for this customer
+
+        # Call the custom SQL function to get the formatted full address
+        full_address = db_session.execute(
+            text("SELECT dbo.fn_format_full_address(:shipping_address_id) AS full_address"),
+            {"shipping_address_id": order.CustomerOrder.shipping_address_id}
+        ).fetchone()[0]  # Fetch the formatted address from the result
+
+        # Get the books associated with this order by joining customer_order_book and book
+        order_books = db_session.query(Book, CustomerOrderBook.quantity). \
+            join(CustomerOrderBook, CustomerOrderBook.book_id == Book.book_id). \
+            filter(CustomerOrderBook.customer_order_id == order.CustomerOrder.customer_order_id). \
+            all()  # Get all books in the order
+
+        # Extract order details
+        total_amount = order.CustomerOrder.total_amount
+        payment_method = order.PaymentMethod.payment_method_name  # Example, adjust to your schema
+        order_status = order.OrderStatus.order_status_name  # Corrected to 'order_status_name'
+
+        return render_template('order_summary.html',
+                               order_books=order_books,
+                               total_amount=total_amount,
+                               shipping_address=full_address,  # Use the full address from the function
+                               payment_method=payment_method,
+                               order_status=order_status)
+
+    except SQLAlchemyError as e:
+        return f"Error retrieving order details: {str(e)}", 500  # Error handling for DB query
+    finally:
+        db_session.close()
+
+
+from flask import redirect, url_for
+
+
+@app.route("/admin/login", methods=["POST", "GET"])
+def admin_login():
+    if request.method == "POST":
+        # Retrieve email and password from the login form
+        email = request.form.get("email")
+        password = request.form.get("password")
+
+        # Validate the admin's credentials
+        if is_admin_valid(email, password):
+            # Get the admin user ID from the database
+            admin_user_id = get_admin_user_id(email)
+
+            # Query the database for the admin object
+            db_session = Session()
+            admin_user = db_session.query(AdminUser).filter_by(admin_user_id=admin_user_id).first()
+            db_session.close()
+
+            # If admin exists, store the necessary data in the session
+            if admin_user:
+                flask_session['admin_user_id'] = admin_user_id
+                flask_session['admin_user_name'] = admin_user.first_name
+                flask_session['admin_user_surname'] = admin_user.last_name
+                flask_session['admin_user_email'] = admin_user.email  # Optionally store the email in the session
+
+                # Flash success message
+                flash("Login successful!", "success")
+
+                # Redirect to the admin dashboard page
+                return redirect(url_for('admin_dashboard'))  # Correct redirect to dashboard
+
+            else:
+                flash("Admin user not found.", "error")
+                return render_template("admin/login.html")  # Return to login if admin user not found
+
+        else:
+            # If credentials are invalid, show error message
+            flash("Invalid email or password", "error")
+            return render_template("admin/login.html")  # Return to login page with error message
+
+    # Handle GET request by rendering the login page
+    return render_template("admin/login.html")
+
+
+@app.route("/admin/register", methods=["POST", "GET"])
+def register_admin():
+    if request.method == "POST":
+        # Get admin user information from the form
+        first_name = request.form.get("first_name")
+        last_name = request.form.get("last_name")
+        email = request.form.get("email")
+        password = request.form.get("password")
+
+        # Validate password strength
+        if len(password) < 8:
+            flash("Password must be at least 8 characters long.", "error")
+            return render_template("admin/register.html")
+
+        password_hash = hash_password(password)
+
+        # Check if email already exists
+        db_session = Session()
+        existing_admin = db_session.query(AdminUser).filter_by(email=email).first()
+
+        if existing_admin:
+            flash("Email already in use. Please choose a different one.", "error")
+            db_session.close()
+            return render_template("admin/register.html")
+
+        try:
+            # Create a new AdminUser instance
+            new_admin_user = AdminUser(
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+                password_hash=password_hash,
+                last_login=None,  # Optional: Set to None initially
+                created_at=datetime.now(),  # Current timestamp
+                updated_at=datetime.now()   # Current timestamp
+            )
+
+            # Add the new admin user to the session
+            db_session.add(new_admin_user)
+            db_session.commit()
+
+            flash(f"Admin registration successful! Admin User ID: {new_admin_user.admin_user_id}", "success")
+            return redirect(url_for("admin_login"))
+
+        except SQLAlchemyError as e:
+            db_session.rollback()
+            error_message = str(e.__dict__['orig'])
+            flash(f"Error registering admin: {error_message}", "error")
+            return render_template("admin/register.html")
+
+        finally:
+            db_session.close()
+
+    return render_template("admin/register.html")
+
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    db_session = Session()
+    if 'admin_user_id' not in flask_session:
+        flash("You must be logged in to access this page.", "error")
+        return redirect(url_for('admin_login'))
+
+    # Fetch admin details from session
+    admin_name = flask_session.get('admin_user_name')
+    admin_surname = flask_session.get('admin_user_surname')
+    admin_email = flask_session.get('admin_user_email')
+
+    # Get total revenue (you can specify start_date and end_date if needed)
+    revenue = get_revenue()
+
+    return render_template('admin/dashboard.html', admin_name=admin_name, admin_surname=admin_surname, admin_email=admin_email, revenue=revenue)

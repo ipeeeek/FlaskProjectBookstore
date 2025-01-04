@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Orders Management{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Manage Orders</h2>
+
+    {% if orders %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Customer Name</th>
+                    <th>Order Status</th>
+                    <th>Total Amount</th>
+                    <th>Payment Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                    <tr>
+                        <td>{{ order.customer_order_id }}</td>
+                        <td>{{ order.customer.first_name }} {{ order.customer.last_name }}</td>
+                        <td>{{ order.order_status.order_status_name }}</td>  <!-- Assuming you have 'status_name' in OrderStatus -->
+                        <td>{{ order.total_amount }}</td>
+                        <td>{{ order.payment.payment_status.payment_status_name }}</td>  <!-- Assuming 'payment_status' in Payment -->
+                        <td>
+                            <a href="{{ url_for('view_order_details', order_id=order.customer_order_id) }}" class="btn btn-info">View</a>
+                            <!-- Add other actions like Edit/Delete if necessary -->
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No orders found.</p>
+    {% endif %}
+</div>
+{% endblock %}

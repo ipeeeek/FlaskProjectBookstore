@@ -5,13 +5,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ba013770-3ed0-4295-aea8-81aa6b2b25e1" name="Changes" comment="Update">
-      <change afterPath="$PROJECT_DIR$/templates/add_address.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/templates/order_summary.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/templates/select_address.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/admin/dashboard.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/admin/inventory.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/admin/login.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/admin/register.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/admin/view_order_details.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/admin/view_orders.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/base.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/base.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/book.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/book.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/order_summary.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/order_summary.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/orders.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/orders.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templates/process_order.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/process_order.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/profile.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/profile.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/select_address.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/select_address.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -70,6 +77,7 @@
     &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
     &quot;Flask server.FlaskProjectBookstore.executor&quot;: &quot;Run&quot;,
     &quot;Python.config.executor&quot;: &quot;Run&quot;,
+    &quot;Python.run.executor&quot;: &quot;Run&quot;,
     &quot;Python.test_connection.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
@@ -135,7 +143,11 @@
       <workItem from="1735849088109" duration="8701000" />
       <workItem from="1735888381506" duration="5005000" />
       <workItem from="1735914715913" duration="7604000" />
-      <workItem from="1735935913779" duration="684000" />
+      <workItem from="1735935913779" duration="1406000" />
+      <workItem from="1735938839626" duration="1295000" />
+      <workItem from="1735941917245" duration="26021000" />
+      <workItem from="1735968396170" duration="792000" />
+      <workItem from="1735970943037" duration="9505000" />
     </task>
     <task id="LOCAL-00001" summary="Initial commit">
       <option name="closed" value="true" />
@@ -217,7 +229,15 @@
       <option name="project" value="LOCAL" />
       <updated>1735853472741</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="Update">
+      <option name="closed" value="true" />
+      <created>1735936664617</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1735936664617</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -266,7 +286,8 @@
     <option name="LAST_COMMIT_MESSAGE" value="Update" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/FlaskProjectBookstore$FlaskProjectBookstore.coverage" NAME="FlaskProjectBookstore Coverage Results" MODIFIED="1735935997662" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/FlaskProjectBookstore$FlaskProjectBookstore.coverage" NAME="FlaskProjectBookstore Coverage Results" MODIFIED="1735979806338" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/FlaskProjectBookstore$run.coverage" NAME="run Coverage Results" MODIFIED="1735957654947" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/FlaskProjectBookstore$test_connection.coverage" NAME="test_connection Coverage Results" MODIFIED="1735464195027" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/FlaskProjectBookstore$config.coverage" NAME="config Coverage Results" MODIFIED="1735463921887" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+    <h1>Welcome, {{ admin_name }} {{ admin_surname }}!</h1>
+    <p>Email: {{ admin_email }}</p>
+
+    <h2>Total Revenue</h2>
+    <p><strong>${{ revenue }}</strong></p>
+
+    <!-- Add a button to view orders -->
+    <form action="{{ url_for('view_orders') }}" method="get">
+        <button type="submit">View Orders</button>
+    </form>
+
+    <!-- Add any other dashboard elements here -->
+{% endblock %}

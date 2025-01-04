@@ -1,10 +1,38 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends 'base.html' %}
 
-</body>
-</html>
+{% block title %}Your Orders{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Your Orders</h2>
+
+    {% if orders %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Total Amount</th>
+                    <th>Shipping Address</th>
+                    <th>Order Status</th>
+                    <th>Order Date</th>
+                    <th>Action</th> <!-- Removed "Order ID" and "Books" columns -->
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                    <tr>
+                        <td>${{ order.total_amount }}</td>
+                        <td>{{ order.shipping_address }}</td>
+                        <td>{{ order.order_status_name }}</td>
+                        <td>{{ order.created_at }}</td>
+                        <td>
+                            <a href="{{ url_for('order_summary', order_id=order.customer_order_id) }}" class="btn btn-info">View Order</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>You have no orders yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

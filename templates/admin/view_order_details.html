@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container">
+        <h1>Order Details</h1>
+        <p><strong>Order ID:</strong> {{ order.customer_order_id }}</p>
+        <p><strong>Customer Name:</strong> {{ order.customer_name }}</p>
+        <p><strong>Email:</strong> {{ order.customer_email }}</p>
+        <p><strong>Phone:</strong> {{ order.customer_phone }}</p>
+
+        <h3>Shipping Address</h3>
+        <p><strong>Full Address:</strong> {{ full_address if full_address else 'Address not available' }}</p>
+
+        <h3>Order Items</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.order_items %}
+                    <tr>
+                        <td>{{ item.product_name }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>${{ item.price }}</td>
+                        <td>${{ item.price * item.quantity }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <h3>Order Summary</h3>
+        <p><strong>Total Price:</strong> ${{ order.total_price }}</p>
+        <p><strong>Status:</strong> {{ order.status }}</p>
+
+        <div class="actions">
+            <a href="{{ url_for('view_orders') }}" class="btn btn-primary">Back to Orders</a>
+        </div>
+    </div>
+{% endblock %}

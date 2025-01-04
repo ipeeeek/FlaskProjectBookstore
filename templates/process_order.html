@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
 {% block title %}Process Order{% endblock %}
 
@@ -6,17 +6,12 @@
 <div class="container mt-5">
     <h2>Process Order</h2>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="alert alert-info">
-                <ul>
-                    {% for category, message in messages %}
-                        <li class="{{ category }}">{{ message }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
-        {% endif %}
-    {% endwith %}
+    <!-- Display Success Message after form submission -->
+    {% if request.method == 'POST' %}
+        <div class="alert alert-success">
+            <p>Your order has been successfully placed!</p>
+        </div>
+    {% endif %}
 
     {% if total_amount == 0 %}
         <p>Your cart is empty. You cannot proceed with an empty cart.</p>
@@ -25,6 +20,7 @@
         <p>Total Amount: ${{ total_amount }}</p>
 
         <form method="POST">
+            <!-- Shipping Address Section -->
             <h3>Select Shipping Address</h3>
             <select class="form-select" name="shipping_address_id" required>
                 <option value="">Select Address</option>
@@ -35,6 +31,7 @@
                 {% endfor %}
             </select>
 
+            <!-- Payment Method Section -->
             <h3>Select Payment Method</h3>
             <select class="form-select" name="payment_method_id" required>
                 <option value="">Select Payment Method</option>
@@ -45,6 +42,20 @@
                 {% endfor %}
             </select>
 
+            <!-- Card Payment Section -->
+            <h3>Card Details</h3>
+            <div>
+                <label for="card_number">Card Number</label>
+                <input type="text" class="form-control" name="card_number" id="card_number" required placeholder="Enter card number" />
+
+                <label for="expiration_date">Expiration Date (MM/YY)</label>
+                <input type="text" class="form-control" name="expiration_date" id="expiration_date" required placeholder="MM/YY" />
+
+                <label for="cvv">CVV</label>
+                <input type="text" class="form-control" name="cvv" id="cvv" required placeholder="CVV" />
+            </div>
+
+            <!-- Submit Button -->
             <button type="submit" class="btn btn-primary mt-3">Place Order</button>
         </form>
     {% endif %}

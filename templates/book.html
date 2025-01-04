@@ -6,12 +6,12 @@
 <div class="container mt-4">
     <div class="row">
         <!-- Book Cover and Information -->
-        <div class="col-md-4">
+        <div class="col-md-4 d-flex flex-column align-items-center">
             {% if book.cover_image_path %}
                 {% set image_filename = book.cover_image_path.split('/')[-1] if '/' in book.cover_image_path else book.cover_image_path %}
-                <img src="{{ url_for('static', filename='covers/' + image_filename) }}" alt="Book Cover" class="img-fluid rounded shadow-sm">
+                <img src="{{ url_for('static', filename='covers/' + image_filename) }}" alt="Book Cover" class="img-fluid rounded shadow-sm mb-3">
             {% else %}
-                <img src="{{ url_for('static', filename='covers/default.jpg') }}" alt="No Cover Available" class="img-fluid rounded shadow-sm">
+                <img src="{{ url_for('static', filename='covers/default.jpg') }}" alt="No Cover Available" class="img-fluid rounded shadow-sm mb-3">
             {% endif %}
         </div>
 
@@ -21,9 +21,54 @@
             <p><strong>Price:</strong> <span class="h4">${{ book.price }}</span></p>
             <p><strong>Synopsis:</strong> {{ book.synopsis }}</p>
 
+            <!-- Book Additional Information -->
+            <p><strong>Publication Date:</strong> {{ book.publication_date.strftime('%B %d, %Y') }}</p>
+            <p><strong>Stock Quantity:</strong> {{ book.stock_quantity }}</p>
+            <p><strong>Page Count:</strong> {{ book.page_count }}</p>
+
+            <!-- Book Dimensions -->
+            <p><strong>Dimensions:</strong> {{ dimension.width }} x {{ dimension.height }} x {{ dimension.depth }} cm</p>
+
+            <!-- Book Format -->
+            <p><strong>Format:</strong> {{ book_format.format_name }}</p>
+
+            <!-- Book Language -->
+            <p><strong>Language:</strong> {{ language.language_name }}</p>
+
+            <!-- Book Publisher -->
+            <p><strong>Publisher:</strong> {{ publisher.publisher_name }}</p>
+
             <!-- Add to Cart Button -->
             <form method="POST" action="{{ url_for('add_to_cart', book_id=book.book_id) }}" class="mt-4">
                 <button type="submit" class="btn btn-lg btn-primary shadow-sm">Add to Cart</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Rating System Moved Below Book Information -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <p><strong>Average Rating:</strong>
+                {% if book.average_rating %}
+                    {{ book.average_rating }} / 5
+                {% else %}
+                    Not Rated Yet
+                {% endif %}
+            </p>
+
+            <form method="POST" action="{{ url_for('rate_book', book_id=book.book_id) }}">
+                <p><strong>Rate this book:</strong></p>
+                <div class="stars">
+                    {% for i in range(1, 6) %}
+                        <input type="radio" id="star{{ i }}" name="rating" value="{{ i }}" {% if book.average_rating and book.average_rating >= i %}checked{% endif %} {% if already_rated %}disabled{% endif %} />
+                        <label for="star{{ i }}" title="Rating {{ i }} star">&#9733;</label>
+                    {% endfor %}
+                </div>
+                {% if already_rated %}
+                    <button type="submit" class="btn btn-lg btn-primary shadow-sm mt-2" disabled>You have already rated this book</button>
+                {% else %}
+                    <button type="submit" class="btn btn-lg btn-primary shadow-sm mt-2">Submit Rating</button>
+                {% endif %}
             </form>
         </div>
     </div>
