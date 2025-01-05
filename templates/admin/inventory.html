@@ -1,10 +1,54 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-</body>
-</html>
+{% block title %}View Inventory{% endblock %}
+
+{% block content %}
+    <h1>Inventory</h1>
+
+    <!-- Navigation Buttons for Out-of-Stock and Sold Books -->
+    <div class="btn-group" role="group" aria-label="Inventory Options">
+        <a href="{{ url_for('out_of_stock_books') }}" class="btn btn-warning">View Out of Stock Books</a>
+        <a href="{{ url_for('sold_books') }}" class="btn btn-success">View Sold Books</a>
+    </div>
+
+    <table class="table mt-3">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>ISBN</th>
+                <th>Price</th>
+                <th>Sales Tax</th> <!-- New column for Sales Tax -->
+                <th>Stock Quantity</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for book in books %}
+                <tr>
+                    <td>{{ book.title }}</td>
+                    <td>{{ book.isbn }}</td>
+                    <td>${{ book.price }}</td>
+                    <td>
+                        {% if sales_tax[book.book_id] %}
+                            ${{ sales_tax[book.book_id] }}
+                        {% else %}
+                            Not Calculated
+                        {% endif %}
+                    </td> <!-- Displaying Sales Tax -->
+                    <td>{{ book.stock_quantity }}</td>
+                    <td>
+                        <!-- Update Button (Edit) -->
+                        <a href="{{ url_for('update_book', book_id=book.book_id) }}" class="btn btn-warning">Edit</a>
+
+                        <!-- Remove Button -->
+                        <form action="{{ url_for('remove_book', book_id=book.book_id) }}" method="POST" class="d-inline">
+                            <button type="submit" class="btn btn-danger">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
+{% endblock %}

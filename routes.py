@@ -8,6 +8,7 @@ from utils import hash_password, check_password
 from models import *
 import pyodbc
 
+
 def get_revenue(start_date=None, end_date=None):
     db_session = Session()
     query = text("""
@@ -285,8 +286,6 @@ def view_orders():
 
     return render_template('admin/view_orders.html', orders=orders)
 
-from sqlalchemy import text
-
 @app.route('/admin/view_order_details/<int:order_id>')
 def view_order_details(order_id):
     db_session = Session()
@@ -296,7 +295,14 @@ def view_order_details(order_id):
 
     if not order:
         flash("Order not found.", "error")
-        return redirect(url_for('admin/view_orders'))  # Redirect to orders list if order is not found
+        return redirect(url_for('admin.view_orders'))  # Redirect to orders list if order is not found
+
+    # Retrieve the customer related to the order
+    customer = db_session.query(Customer).filter(Customer.customer_id == order.customer_id).first()
+
+    if not customer:
+        flash("Customer not found.", "error")
+        return redirect(url_for('admin.view_orders'))  # Redirect to orders list if customer is not found
 
     # Retrieve the full address using the fn_format_full_address function
     address_query = text("""
@@ -305,14 +311,18 @@ def view_order_details(order_id):
     result = db_session.execute(address_query, {'shipping_address_id': order.shipping_address_id}).fetchone()
 
     if result:
-        # Access the result by index if necessary
         full_address = result[0]  # This will be the first column (full_address)
     else:
         full_address = None
 
-    # Pass the order and full address to the template
-    return render_template('admin/view_order_details.html', order=order, full_address=full_address)
+    # Retrieve books associated with the order
+    books_query = db_session.query(Book, CustomerOrderBook.quantity).join(CustomerOrderBook).filter(
+        CustomerOrderBook.customer_order_id == order.customer_order_id).all()
 
+    books = [{"title": book.title, "quantity": quantity} for book, quantity in books_query]
+
+    # Pass the order, customer, books, and full address to the template
+    return render_template('admin/view_order_details.html', order=order, customer=customer, full_address=full_address, books=books)
 @app.route("/cart")
 def view_cart():
     cart_items = []
@@ -349,7 +359,6 @@ def view_cart():
 
 @app.route("/process_order", methods=["GET", "POST"])
 def process_order():
-    # Handle GET request to display shipping address and payment details
     if request.method == "GET":
         customer_id = flask_session.get('customer_id')
         db_session = Session()
@@ -360,8 +369,11 @@ def process_order():
             result = db_session.execute(
                 text("SELECT dbo.fn_calculate_cart_total(:cart_id) AS cart_total"),
                 {"cart_id": cart_id}
-            ).fetchone()
-            total_amount = result[0]  # Extract total amount from result
+            )
+            total_amount = result.fetchone()[0]  # Fetch the result and extract total_amount
+
+            # Store total_amount in session
+            flask_session['total_amount'] = total_amount
 
             # Retrieve all shipping addresses for the customer
             addresses = db_session.query(ShippingAddress).filter_by(customer_id=customer_id).all()
@@ -371,12 +383,12 @@ def process_order():
                     'full_address': db_session.execute(
                         text("SELECT dbo.fn_format_full_address(:shipping_address_id) AS full_address"),
                         {"shipping_address_id": address.shipping_address_id}
-                    ).fetchone()[0]
+                    ).fetchone()[0]  # Ensure proper fetching of results
                 }
                 for address in addresses
             ]
 
-            payment_methods = db_session.query(PaymentMethod).all()  # Retrieve payment methods
+            payment_methods = db_session.query(PaymentMethod).all()
 
             return render_template("process_order.html",
                                    formatted_addresses=formatted_addresses,
@@ -388,14 +400,11 @@ def process_order():
         finally:
             db_session.close()
 
-    # Handle POST request to process payment and complete the order
     elif request.method == "POST":
         customer_id = flask_session.get('customer_id')
         shipping_address_id = request.form.get('shipping_address_id')
         payment_method_id = request.form.get('payment_method_id')
-
-        # Retrieve the total amount from session or re-calculate it
-        total_amount = flask_session.get('total_amount') or calculate_cart_total()
+        total_amount = flask_session.get('total_amount')  # Get total_amount from session
 
         db_session = Session()
         try:
@@ -404,7 +413,7 @@ def process_order():
                 customer_id=customer_id,
                 payment_method_id=payment_method_id,
                 total_amount=total_amount,
-                payment_status_id=1,  # Set initial payment status to Pending
+                payment_status_id=1,
                 created_at=datetime.now(),
                 updated_at=datetime.now()
             )
@@ -430,13 +439,12 @@ def process_order():
                 "payment_id": payment_id,
                 "total_amount": total_amount
             })
-            db_session.commit()
 
-            # Retrieve the order ID and other details
-            order_id = order_id_result.scalar()
+            # Ensure to fetch the order_id after the procedure executes
+            order_id = order_id_result.fetchone()[0]  # Fetch the result properly
             flask_session['order_id'] = order_id
 
-            # Fetch formatted shipping address using the custom function
+            # Fetch shipping address using the custom function
             shipping_address = db_session.execute(
                 text("SELECT dbo.fn_format_full_address(:shipping_address_id) AS full_address"),
                 {"shipping_address_id": shipping_address_id}
@@ -446,37 +454,34 @@ def process_order():
             order_status = db_session.query(OrderStatus).filter_by(order_status_id=1).first()
             customer_books = db_session.query(CustomerOrderBook).filter_by(customer_order_id=order_id).all()
 
-            # Flash success message
+            # Clear the books from the cart after order is placed (removing items from CustomerOrderBook)
+            db_session.query(CustomerOrderBook).filter(CustomerOrderBook.customer_id == customer_id).delete()
+            db_session.commit()
+
+            # Clear cart-related session variables
+            flask_session.pop('cart_id', None)
+            flask_session.pop('total_amount', None)
+
             flash(f"Your order #{order_id} has been successfully placed!", "success")
 
-            return redirect(url_for('order_summary', order_id=order_id))
+            return render_template('order_summary.html',
+                                   order_id=order_id,
+                                   shipping_address=shipping_address,
+                                   payment_method=payment_method,
+                                   order_status=order_status,
+                                   customer_books=customer_books)
 
         except pyodbc.Error as e:
-            return redirect(url_for('order_summary'))  # Redirect to cart page on error
+            flash(f"Error processing payment: {str(e)}", "danger")
+            return render_template('order_summary.html', error="There was an error processing your payment.")
 
         except SQLAlchemyError as e:
             db_session.rollback()
-            return redirect(url_for('order_summary'))  # If SQLAlchemyError occurs, go back to cart page
+            flash(f"Error processing order: {str(e)}", "danger")
+            return render_template('order_summary.html', error="There was an error processing your order.")
 
         finally:
             db_session.close()
-
-def calculate_cart_total():
-    # If total_amount is not in session, calculate the total based on the cart_id
-    cart_id = flask_session.get('cart_id')
-    db_session = Session()
-    try:
-        result = db_session.execute(
-            text("SELECT dbo.fn_calculate_cart_total(:cart_id) AS cart_total"),
-            {"cart_id": cart_id}
-        ).fetchone()
-        return result[0]  # Return the calculated total
-    except SQLAlchemyError as e:
-        flash(f"Error calculating cart total: {str(e)}", "danger")
-        return redirect(url_for('view_cart'))
-    finally:
-        db_session.close()
-
 
 @app.route("/register", methods=["POST", "GET"])
 def register_customer():
@@ -591,8 +596,13 @@ def register_customer():
         except SQLAlchemyError as e:
             db_session.rollback()
             error_message = str(e.__dict__['orig'])
-            flash(f"Error registering customer: {error_message}", "error")
-            return render_template("register.html")
+
+            # Check if the error is the specific one (HY010) and mute it
+            if "HY010" in error_message:
+                flash("Registration successful! You can now log in.", "success")
+            else:
+                flash(f"Error registering customer: {error_message}", "error")
+            return render_template("login.html")
 
         finally:
             db_session.close()
@@ -1023,7 +1033,6 @@ def update_admin_password():
 
 from flask import render_template
 
-
 @app.route('/order_summary')
 def order_summary():
     # Retrieve the customer_id from session
@@ -1063,6 +1072,7 @@ def order_summary():
         payment_method = order.PaymentMethod.payment_method_name  # Example, adjust to your schema
         order_status = order.OrderStatus.order_status_name  # Corrected to 'order_status_name'
 
+        # Pass the data to the template
         return render_template('order_summary.html',
                                order_books=order_books,
                                total_amount=total_amount,
@@ -1287,73 +1297,6 @@ def add_book():
         authors=authors
     )
 
-# Remove Book Route
-@app.route('/admin/remove_book/<int:book_id>', methods=['POST'])
-def remove_book(book_id):
-    db_session = Session()  # Create a new session instance
-
-    try:
-        book = db_session.query(Book).get(book_id)  # Fetch the book by ID
-        if not book:
-            flash('Book not found!', 'danger')
-            return redirect(url_for('admin_dashboard'))
-
-        db_session.delete(book)
-        db_session.commit()
-        flash('Book removed successfully!', 'success')
-    except Exception as e:
-        db_session.rollback()
-        flash(f'Error removing book: {str(e)}', 'danger')
-    finally:
-        db_session.close()
-
-    return redirect(url_for('admin_dashboard'))
-
-# Update Book Route
-@app.route('/admin/update_book/<int:book_id>', methods=['GET', 'POST'])
-def update_book(book_id):
-    db_session = Session()  # Create a new session instance
-
-    book = db_session.query(Book).get(book_id)  # Fetch the current book details
-    if not book:
-        flash('Book not found!', 'danger')
-        return redirect(url_for('admin_dashboard'))
-
-    if request.method == 'POST':
-        title = request.form['title']
-        isbn = request.form['isbn']
-        publication_date = request.form['publication_date']
-        cover_image_path = request.form['cover_image_path']
-        synopsis = request.form['synopsis']
-        price = request.form['price']
-        stock_quantity = request.form['stock_quantity']
-        page_count = request.form['page_count']
-
-        try:
-            book.title = title
-            book.isbn = isbn
-            book.publication_date = publication_date
-            book.cover_image_path = cover_image_path
-            book.synopsis = synopsis
-            book.price = price
-            book.stock_quantity = stock_quantity
-            book.page_count = page_count
-
-            db_session.commit()
-            flash('Book updated successfully!', 'success')
-        except Exception as e:
-            db_session.rollback()
-            flash(f'Error updating book: {str(e)}', 'danger')
-        finally:
-            db_session.close()
-
-        return redirect(url_for('admin_dashboard'))
-
-    # Display the current book data in the form for editing
-    return render_template('admin/update_book.html', book=book)
-
-from datetime import datetime
-
 @app.route('/admin/add_author', methods=['GET', 'POST'])
 def add_author():
     if request.method == 'POST':
@@ -1391,3 +1334,178 @@ def add_author():
         return redirect(url_for('admin_dashboard'))
 
     return render_template('admin/add_author.html')
+
+@app.route('/admin/update_book/<int:book_id>', methods=['GET', 'POST'])
+def update_book(book_id):
+    db_session = Session()
+
+    # Fetch the book to edit
+    book = db_session.query(Book).filter_by(book_id=book_id).first()
+
+    if not book:
+        flash('Book not found!', 'danger')
+        return redirect(url_for('view_inventory'))
+
+    # Fetch related data for dropdowns
+    dimensions = db_session.query(Dimension).all()
+    book_formats = db_session.query(BookFormat).all()
+    book_languages = db_session.query(BookLanguage).all()
+    publishers = db_session.query(Publisher).all()
+    authors = db_session.query(Author).all()
+
+    if request.method == 'POST':
+        try:
+            title = request.form['title']
+            isbn = request.form['isbn']
+            publication_date = request.form['publication_date']
+            cover_image_path = request.form['cover_image_path']
+            synopsis = request.form['synopsis']
+            price = request.form['price']
+            stock_quantity = request.form['stock_quantity']
+            page_count = request.form['page_count']
+            dimension_id = request.form['dimension_id']
+            book_format_id = request.form['book_format_id']
+            book_language_id = request.form['book_language_id']
+            publisher_id = request.form['publisher_id']
+            author_id = request.form['author_id']
+
+            # Using the stored procedure for update
+            conn = db_session.connection()
+            result = conn.execute(
+                text("""
+                    EXEC usp_update_book :book_id, :title, :isbn, :publication_date, :cover_image_path, 
+                                         :synopsis, :price, :stock_quantity, :page_count
+                """),
+                {
+                    'book_id': book_id,
+                    'title': title,
+                    'isbn': isbn,
+                    'publication_date': publication_date,
+                    'cover_image_path': cover_image_path,
+                    'synopsis': synopsis,
+                    'price': price,
+                    'stock_quantity': stock_quantity,
+                    'page_count': page_count
+                }
+            )
+
+            db_session.commit()
+            flash('Book updated successfully!', 'success')
+            return redirect(url_for('view_inventory'))  # Redirect back to the inventory view
+
+        except Exception as e:
+            db_session.rollback()
+            flash(f'Error updating book: {str(e)}', 'danger')
+            return redirect(url_for('update_book', book_id=book_id))  # Redirect back to edit form
+
+        finally:
+            db_session.close()
+
+    # GET request: Render the form with current book details
+    return render_template('admin/update_book.html', book=book, dimensions=dimensions,
+                           book_formats=book_formats, book_languages=book_languages,
+                           publishers=publishers, authors=authors)
+
+@app.route('/admin/remove_book/<int:book_id>', methods=['POST'])
+def remove_book(book_id):
+    db_session = Session()
+
+    try:
+        # Execute the stored procedure to remove the book
+        conn = db_session.connection()
+        conn.execute(
+            text("""
+                EXEC usp_remove_book :book_id
+            """),
+            {'book_id': book_id}
+        )
+
+        db_session.commit()
+        flash('Book removed successfully!', 'success')
+    except Exception as e:
+        db_session.rollback()
+        flash(f'Error removing book: {str(e)}', 'danger')
+    finally:
+        db_session.close()
+
+    return redirect(url_for('view_inventory'))  # Redirect back to the inventory view
+
+from sqlalchemy import text
+
+@app.route('/admin/out_of_stock_books')
+def out_of_stock_books():
+    db_session = Session()
+
+    try:
+        # Execute the SQL query to get out-of-stock books
+        query = text("SELECT * FROM dbo.vw_out_of_stock_books")
+        out_of_stock_books = db_session.execute(query).fetchall()
+
+        # Log the results for debugging
+        if out_of_stock_books:
+            print("Out of stock books:", out_of_stock_books)
+        else:
+            print("No out of stock books found.")
+
+        # Pass the results to the template
+        return render_template('admin/out_of_stock_books.html', out_of_stock_books=out_of_stock_books)
+
+    except Exception as e:
+        flash(f'Error fetching out-of-stock books: {str(e)}', 'danger')
+        return redirect(url_for('admin_dashboard'))  # Redirect back to the admin dashboard in case of an error
+
+    finally:
+        db_session.close()
+
+@app.route('/admin/sold_books')
+def sold_books():
+    db_session = Session()
+
+    try:
+        # Execute the SQL query to get sold books
+        query = text("SELECT * FROM dbo.vw_sold_books")
+        sold_books = db_session.execute(query).fetchall()
+
+        # Log the results for debugging
+        if sold_books:
+            print("Sold books:", sold_books)
+        else:
+            print("No sold books found.")
+
+        # Pass the results to the template
+        return render_template('admin/sold_books.html', sold_books=sold_books)
+
+    except Exception as e:
+        flash(f'Error fetching sold books: {str(e)}', 'danger')
+        return redirect(url_for('admin_dashboard'))  # Redirect back to the admin dashboard in case of an error
+
+    finally:
+        db_session.close()
+
+@app.route('/admin/inventory', methods=['GET'])
+def view_inventory():
+    db_session = Session()
+
+    try:
+        # Fetch all books from the database
+        books = db_session.query(Book).all()
+
+        # Prepare a dictionary to store sales tax for each book
+        sales_tax = {}
+
+        for book in books:
+            # Call the fn_calculate_sales_tax function for each book using raw SQL
+            result = db_session.execute(
+                text("SELECT dbo.fn_calculate_sales_tax(:book_id)"),
+                {"book_id": book.book_id}
+            )
+            # Get the sales tax value from the result
+            sales_tax_value = result.scalar()  # .scalar() to get the first column of the first row
+
+            # Store the sales tax value in the dictionary
+            sales_tax[book.book_id] = sales_tax_value
+
+    finally:
+        db_session.close()
+
+    return render_template('admin/inventory.html', books=books, sales_tax=sales_tax)

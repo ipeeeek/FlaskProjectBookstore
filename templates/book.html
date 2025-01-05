@@ -13,6 +13,22 @@
             {% else %}
                 <img src="{{ url_for('static', filename='covers/default.jpg') }}" alt="No Cover Available" class="img-fluid rounded shadow-sm mb-3">
             {% endif %}
+
+            <!-- Average Rating -->
+            <p><strong>Average Rating:</strong>
+                {% if book.average_rating %}
+                    <!-- Displaying Stars Based on Average Rating -->
+                    <div class="stars">
+                        {% for i in range(1, 6) %}
+                            <span class="star">
+                                <i class="fa {% if book.average_rating >= i %}fa-star{% else %}fa-star-o{% endif %}"></i>
+                            </span>
+                        {% endfor %}
+                    </div>
+                    <span>{{ book.average_rating }} / 5</span>
+                {% else %}
+                    Not Rated Yet
+                {% endif %}
         </div>
 
         <div class="col-md-8">
@@ -30,10 +46,10 @@
             <p><strong>Dimensions:</strong> {{ dimension.width }} x {{ dimension.height }} x {{ dimension.depth }} cm</p>
 
             <!-- Book Format -->
-            <p><strong>Format:</strong> {{ book_format.format_name }}</p>
+            <p><strong>Format:</strong> {{ book.book_format.book_format_name }}</p>
 
             <!-- Book Language -->
-            <p><strong>Language:</strong> {{ language.language_name }}</p>
+            <p><strong>Language:</strong> {{ book.book_language.book_language_name }}</p>
 
             <!-- Book Publisher -->
             <p><strong>Publisher:</strong> {{ publisher.publisher_name }}</p>
@@ -45,22 +61,16 @@
         </div>
     </div>
 
-    <!-- Rating System Moved Below Book Information -->
+    <!-- Rating System -->
     <div class="row mt-4">
         <div class="col-md-12">
-            <p><strong>Average Rating:</strong>
-                {% if book.average_rating %}
-                    {{ book.average_rating }} / 5
-                {% else %}
-                    Not Rated Yet
-                {% endif %}
-            </p>
-
             <form method="POST" action="{{ url_for('rate_book', book_id=book.book_id) }}">
                 <p><strong>Rate this book:</strong></p>
                 <div class="stars">
-                    {% for i in range(1, 6) %}
-                        <input type="radio" id="star{{ i }}" name="rating" value="{{ i }}" {% if book.average_rating and book.average_rating >= i %}checked{% endif %} {% if already_rated %}disabled{% endif %} />
+                    {% for i in range(5, 0, -1) %}
+                        <input type="radio" id="star{{ i }}" name="rating" value="{{ i }}"
+                            {% if book.average_rating and book.average_rating >= i %}checked{% endif %}
+                            {% if already_rated %}disabled{% endif %} />
                         <label for="star{{ i }}" title="Rating {{ i }} star">&#9733;</label>
                     {% endfor %}
                 </div>
@@ -72,5 +82,6 @@
             </form>
         </div>
     </div>
+
 </div>
 {% endblock %}

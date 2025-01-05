@@ -1,35 +1,92 @@
-<form method="POST">
-    <div class="form-group">
-        <label for="title">Title</label>
-        <input type="text" class="form-control" id="title" name="title" value="{{ book.title }}" required>
-    </div>
-    <div class="form-group">
-        <label for="isbn">ISBN</label>
-        <input type="text" class="form-control" id="isbn" name="isbn" value="{{ book.isbn }}" required>
-    </div>
-    <div class="form-group">
-        <label for="publication_date">Publication Date</label>
-        <input type="date" class="form-control" id="publication_date" name="publication_date" value="{{ book.publication_date }}" required>
-    </div>
-    <div class="form-group">
-        <label for="cover_image_path">Cover Image Path</label>
-        <input type="text" class="form-control" id="cover_image_path" name="cover_image_path" value="{{ book.cover_image_path }}" required>
-    </div>
-    <div class="form-group">
-        <label for="synopsis">Synopsis</label>
-        <textarea class="form-control" id="synopsis" name="synopsis" required>{{ book.synopsis }}</textarea>
-    </div>
-    <div class="form-group">
-        <label for="price">Price</label>
-        <input type="number" class="form-control" id="price" name="price" value="{{ book.price }}" required step="0.01">
-    </div>
-    <div class="form-group">
-        <label for="stock_quantity">Stock Quantity</label>
-        <input type="number" class="form-control" id="stock_quantity" name="stock_quantity" value="{{ book.stock_quantity }}" required>
-    </div>
-    <div class="form-group">
-        <label for="page_count">Page Count</label>
-        <input type="number" class="form-control" id="page_count" name="page_count" value="{{ book.page_count }}" required>
-    </div>
-    <button type="submit" class="btn btn-primary">Update Book</button>
-</form>
+{% extends "base.html" %}
+
+{% block title %}Update Book{% endblock %}
+
+{% block content %}
+    <h1>Update Book</h1>
+    <form method="POST">
+        <div class="form-group">
+            <label for="title">Title</label>
+            <input type="text" class="form-control" id="title" name="title" value="{{ book.title }}" required>
+        </div>
+        <div class="form-group">
+            <label for="isbn">ISBN</label>
+            <input type="text" class="form-control" id="isbn" name="isbn" value="{{ book.isbn }}" required>
+        </div>
+        <div class="form-group">
+            <label for="publication_date">Publication Date</label>
+            <input type="date" class="form-control" id="publication_date" name="publication_date" value="{{ book.publication_date }}" required>
+        </div>
+        <div class="form-group">
+            <label for="cover_image_path">Cover Image Path</label>
+            <input type="text" class="form-control" id="cover_image_path" name="cover_image_path" value="{{ book.cover_image_path }}" required>
+        </div>
+        <div class="form-group">
+            <label for="synopsis">Synopsis</label>
+            <textarea class="form-control" id="synopsis" name="synopsis" required>{{ book.synopsis }}</textarea>
+        </div>
+        <div class="form-group">
+            <label for="price">Price</label>
+            <input type="number" class="form-control" id="price" name="price" value="{{ book.price }}" required step="0.01">
+        </div>
+        <div class="form-group">
+            <label for="stock_quantity">Stock Quantity</label>
+            <input type="number" class="form-control" id="stock_quantity" name="stock_quantity" value="{{ book.stock_quantity }}" required>
+        </div>
+        <div class="form-group">
+            <label for="page_count">Page Count</label>
+            <input type="number" class="form-control" id="page_count" name="page_count" value="{{ book.page_count }}" required>
+        </div>
+        <div class="form-group">
+            <label for="dimension_id">Dimension</label>
+            <select class="form-control" id="dimension_id" name="dimension_id" required>
+                {% for dimension in dimensions %}
+                    <option value="{{ dimension.dimension_id }}" {% if dimension.dimension_id == book.dimension_id %}selected{% endif %}>
+                        Height: {{ dimension.height }} | Width: {{ dimension.width }} | Depth: {{ dimension.depth }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="book_format_id">Book Format</label>
+            <select class="form-control" id="book_format_id" name="book_format_id" required>
+                {% for book_format in book_formats %}
+                    <option value="{{ book_format.book_format_id }}" {% if book_format.book_format_id == book.book_format_id %}selected{% endif %}>
+                        {{ book_format.book_format_name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="book_language_id">Book Language</label>
+            <select class="form-control" id="book_language_id" name="book_language_id" required>
+                {% for book_language in book_languages %}
+                    <option value="{{ book_language.book_language_id }}" {% if book_language.book_language_id == book.book_language_id %}selected{% endif %}>
+                        {{ book_language.book_language_name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="publisher_id">Publisher</label>
+            <select class="form-control" id="publisher_id" name="publisher_id" required>
+                {% for publisher in publishers %}
+                    <option value="{{ publisher.publisher_id }}" {% if publisher.publisher_id == book.publisher_id %}selected{% endif %}>
+                        {{ publisher.publisher_name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="author_id">Author</label>
+            <select class="form-control" id="author_id" name="author_id" required>
+                {% for author in authors %}
+                    <option value="{{ author.author_id }}" {% if author.author_id == book.author_id %}selected{% endif %}>
+                        {{ author.first_name }} {{ author.last_name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Update Book</button>
+    </form>
+{% endblock %}

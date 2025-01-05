@@ -4,17 +4,17 @@
 
 {% block content %}
 <div class="container mt-5">
-    <h2>Your Orders</h2>
+    <h2 class="mb-4">Your Orders</h2>
 
     {% if orders %}
-        <table class="table table-striped">
+        <table class="table table-striped table-bordered">
             <thead>
-                <tr>
+                <tr class="table-dark">
                     <th>Total Amount</th>
                     <th>Shipping Address</th>
                     <th>Order Status</th>
                     <th>Order Date</th>
-                    <th>Action</th> <!-- Removed "Order ID" and "Books" columns -->
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -25,14 +25,14 @@
                         <td>{{ order.order_status_name }}</td>
                         <td>{{ order.created_at }}</td>
                         <td>
-                            <a href="{{ url_for('order_summary', order_id=order.customer_order_id) }}" class="btn btn-info">View Order</a>
+                            <a href="{{ url_for('order_summary', order_id=order.customer_order_id) }}" class="btn btn-info btn-sm">View Order</a>
                         </td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
     {% else %}
-        <p>You have no orders yet.</p>
+        <p class="alert alert-warning">You have no orders yet.</p>
     {% endif %}
 </div>
 {% endblock %}

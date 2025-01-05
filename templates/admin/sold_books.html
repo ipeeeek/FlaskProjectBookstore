@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Sold Books{% endblock %}
+
+{% block content %}
+    <h1>Sold Books</h1>
+    {% if sold_books %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Book ID</th>
+                    <th>Title</th>
+                    <th>Total Quantity Sold</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for book in sold_books %}
+                    <tr>
+                        <td>{{ book.book_id }}</td>
+                        <td>{{ book.title }}</td>
+                        <td>{{ book.total_quantity_sold }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No sold books found.</p>
+    {% endif %}
+{% endblock %}

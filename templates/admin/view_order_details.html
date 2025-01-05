@@ -1,44 +1,49 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+
+{% block title %}Order Details{% endblock %}
 
 {% block content %}
-    <div class="container">
-        <h1>Order Details</h1>
-        <p><strong>Order ID:</strong> {{ order.customer_order_id }}</p>
-        <p><strong>Customer Name:</strong> {{ order.customer_name }}</p>
-        <p><strong>Email:</strong> {{ order.customer_email }}</p>
-        <p><strong>Phone:</strong> {{ order.customer_phone }}</p>
+    <h1>Order Details</h1>
 
-        <h3>Shipping Address</h3>
-        <p><strong>Full Address:</strong> {{ full_address if full_address else 'Address not available' }}</p>
+    {% if order %}
+        <div class="order-summary">
+            <h3>Order #{{ order.order_id }}</h3>
+            <p><strong>Customer:</strong> {{ customer.first_name }} {{ customer.last_name }}</p>
+            <p><strong>Email:</strong> {{ customer.email }}</p>
+            <p><strong>Phone:</strong> {{ customer.phone }}</p>
+            <p><strong>Order Date:</strong> {{ order.order_date }}</p>
+            <p><strong>Status:</strong> {{ order.status }}</p>
+            <p><strong>Total Amount:</strong> ${{ order.total_amount }}</p>
+        </div>
+
+        <hr>
 
         <h3>Order Items</h3>
-        <table class="table">
+        <table class="table table-bordered">
             <thead>
                 <tr>
-                    <th>Item</th>
+                    <th>Book Title</th>
                     <th>Quantity</th>
                     <th>Price</th>
                     <th>Total</th>
                 </tr>
             </thead>
             <tbody>
-                {% for item in order.order_items %}
+                {% for item in order_items %}
                     <tr>
-                        <td>{{ item.product_name }}</td>
+                        <td>{{ item.book_title }}</td>
                         <td>{{ item.quantity }}</td>
                         <td>${{ item.price }}</td>
-                        <td>${{ item.price * item.quantity }}</td>
+                        <td>${{ item.quantity * item.price }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
 
-        <h3>Order Summary</h3>
-        <p><strong>Total Price:</strong> ${{ order.total_price }}</p>
-        <p><strong>Status:</strong> {{ order.status }}</p>
+        <hr>
 
-        <div class="actions">
-            <a href="{{ url_for('view_orders') }}" class="btn btn-primary">Back to Orders</a>
-        </div>
-    </div>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
+    {% else %}
+        <p>Order not found.</p>
+    {% endif %}
 {% endblock %}

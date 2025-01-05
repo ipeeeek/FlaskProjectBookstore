@@ -1,23 +1,32 @@
 {% extends 'base.html' %}
 
-{% block title %}Order Summary{% endblock %}
-
 {% block content %}
-<div class="container mt-5">
-    <h2>Order Summary</h2>
+<h3>Order Details</h3>
+<table class="table">
+    <tr>
+        <th>Total Amount</th>
+        <td>${{ total_amount }}</td>
+    </tr>
+    <tr>
+        <th>Shipping Address</th>
+        <td>{{ shipping_address }}</td>
+    </tr>
+    <tr>
+        <th>Payment Method</th>
+        <td>{{ payment_method }}</td>
+    </tr>
+    <tr>
+        <th>Order Status</th>
+        <td>{{ order_status }}</td>  <!-- Display the order status -->
+    </tr>
+</table>
 
-    <p><strong>Total Amount:</strong> ${{ total_amount }}</p>
-    <p><strong>Shipping Address:</strong> {{ shipping_address }}</p>
-    <p><strong>Payment Method:</strong> {{ payment_method }}</p>
-    <p><strong>Order Status:</strong> {{ order_status }}</p>
+<h3>Books in Order:</h3>
+<ul>
+    {% for book, quantity in order_books %}
+        <li>{{ book.title }} - Quantity: {{ quantity }}</li>
+    {% endfor %}
+</ul>
 
-    <h3>Books in Order:</h3>
-    <ul>
-        {% for book, quantity in order_books %}
-            <li>{{ book.title }} ({{ quantity }})</li>
-        {% endfor %}
-    </ul>
-
-    <a href="{{ url_for('index') }}" class="btn btn-primary">Back to Home</a>
-</div>
+<a href="{{ url_for('index') }}" class="btn btn-primary">Back to Home</a>
 {% endblock %}
