@@ -7,12 +7,12 @@
 
     {% if order %}
         <div class="order-summary">
-            <h3>Order #{{ order.order_id }}</h3>
+            <h3>Order #{{ order.customer_order_id }}</h3>
             <p><strong>Customer:</strong> {{ customer.first_name }} {{ customer.last_name }}</p>
             <p><strong>Email:</strong> {{ customer.email }}</p>
             <p><strong>Phone:</strong> {{ customer.phone }}</p>
-            <p><strong>Order Date:</strong> {{ order.order_date }}</p>
-            <p><strong>Status:</strong> {{ order.status }}</p>
+            <p><strong>Order Date:</strong> {{ order.created_at }}</p>
+            <p><strong>Status:</strong> {{ order_status }}</p>
             <p><strong>Total Amount:</strong> ${{ order.total_amount }}</p>
         </div>
 
@@ -29,9 +29,9 @@
                 </tr>
             </thead>
             <tbody>
-                {% for item in order_items %}
+                {% for item in books %}
                     <tr>
-                        <td>{{ item.book_title }}</td>
+                        <td>{{ item.title }}</td>
                         <td>{{ item.quantity }}</td>
                         <td>${{ item.price }}</td>
                         <td>${{ item.quantity * item.price }}</td>
